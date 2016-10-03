@@ -1,5 +1,6 @@
 package edu.game.checkers.logic;
 
+import android.util.Log;
 import android.util.Pair;
 import java.lang.reflect.Constructor;
 import java.util.ArrayList;
@@ -14,7 +15,7 @@ public class Game extends Thread{
                             flyingKing = 4;
 
     private Player[] players = new Player[2];
-    private Piece[][] pieces;
+    private Piece[][] pieces = new Piece[8][8];
     private BoardView view;
     private int options;
     private ArrayList<Piece[][]> history = new ArrayList<>();
@@ -31,9 +32,6 @@ public class Game extends Thread{
 
         try
         {
-            pieces = new Piece[8][8];
-            //TODO - initialize pieces
-
             Constructor<? extends Player> constructor;
             constructor = playerClass1.getDeclaredConstructor(Player.Color.class, Game.class);
             players[0] = constructor.newInstance(Player.Color.WHITE, this);
@@ -41,11 +39,26 @@ public class Game extends Thread{
             constructor = playerClass2.getDeclaredConstructor(Player.Color.class, Game.class);
             players[1] = constructor.newInstance(Player.Color.BLACK, this);
 
+            for(int x = 0; x < 8; x++)
+            {
+                for(int y = 0; y < 3; y++)
+                {
+                    if((x + y) % 2 != 0)
+                        pieces[x][y] = new Men(new Position(x, y), players[1]);
+                }
+                for(int y = 7; y >= 5; y--)
+                {
+                    if((x + y) % 2 != 0)
+                        pieces[x][y] = new Men(new Position(x, y), players[0]);
+                }
+            }
+
             view.setPieces(pieces);
+            view.postInvalidate();
         }
         catch(Exception e)
         {
-            //TODO
+            e.printStackTrace();
         }
 
     }
@@ -92,7 +105,7 @@ public class Game extends Thread{
                     piece.moveTo(target, pieces);
 
                     view.postInvalidate();
-                }while(piece.canJump(pieces) && ((1 << obligatoryCapture) & options) != 0);
+                }while(piece.canJump(options, pieces) && ((1 << obligatoryCapture) & options) != 0);
             }
 
             //TODO - end

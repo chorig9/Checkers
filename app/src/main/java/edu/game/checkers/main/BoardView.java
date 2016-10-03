@@ -31,6 +31,9 @@ public class BoardView extends View{
 
         drawBoard(canvas);
 
+        if(pieces == null)
+            return;
+
         for (Piece[] pieceRow : pieces)
             for (Piece piece : pieceRow)
                 if (piece != null)

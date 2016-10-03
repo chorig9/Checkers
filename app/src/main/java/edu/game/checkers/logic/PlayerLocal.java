@@ -33,6 +33,7 @@ public class PlayerLocal extends Player{
         return null;
     }
 
+
     public void setSource(Position position)
     {
         sourcePosition = position;
@@ -40,7 +41,9 @@ public class PlayerLocal extends Player{
 
     public void setTarget(Position position)
     {
-        if(sourcePosition != null && getPieces()[sourcePosition.x][sourcePosition.y].isMoveValid(position, game.getOptions(), getPieces()))
+        if(sourcePosition != null
+                && getPieces()[sourcePosition.x][sourcePosition.y].isMoveValid(position,
+                game.getOptions(), getPieces()))
         {
             targetPosition = position;
             done.countDown();

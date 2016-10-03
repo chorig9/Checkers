@@ -34,7 +34,7 @@ public abstract class Player {
         {
             for(int y = 0; y < 8; y++)
             {
-                if(game.getPieces()[x][y].canJump(game.getPieces()))
+                if(game.getPieces()[x][y].canJump(game.getOptions(), game.getPieces()))
                     return true;
             }
         }

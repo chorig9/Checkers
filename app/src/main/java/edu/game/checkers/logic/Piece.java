@@ -37,5 +37,5 @@ public abstract class Piece {
 
     public abstract ArrayList<Position> getValidPositions(int options, Piece pieces[][]);
 
-    public abstract boolean canJump(Piece pieces[][]);
+    public abstract boolean canJump(int options, Piece pieces[][]);
 }

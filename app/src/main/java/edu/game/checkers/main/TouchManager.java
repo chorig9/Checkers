@@ -32,9 +32,12 @@ public class TouchManager implements View.OnTouchListener{
             int x = ((int) motionEvent.getX()) / tileSize;
             int y = ((int) motionEvent.getY()) / tileSize;
 
+            if(x < 0 || x >= 8 || y < 0 || y >= 8)
+                return false;
+
             // piece exists and is owned by 'user' and if there is any piece that must jump(capture) this is one of them
             if(user.getPieces()[x][y] != null && user.getPieces()[x][y].getOwner() == user &&
-                    (!user.canAnyPieceJump() || (user.canAnyPieceJump() && user.getPieces()[x][y].canJump(user.getPieces()))))
+                    (!user.canAnyPieceJump() || (user.canAnyPieceJump() && user.getPieces()[x][y].canJump(user.getOptions(), user.getPieces()))))
             {
                 boardView.setHints(user.getPieces()[x][y].getValidPositions(user.getOptions(), user.getPieces()));
                 boardView.postInvalidate();
