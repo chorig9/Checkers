@@ -1,6 +1,5 @@
 package edu.game.checkers.logic;
 
-import android.util.Log;
 import android.util.Pair;
 import java.lang.reflect.Constructor;
 import java.util.ArrayList;
@@ -21,6 +20,7 @@ public class Game extends Thread{
     private ArrayList<Piece[][]> history = new ArrayList<>();
     private TouchManager touchManager = new TouchManager();
     private boolean running = true;
+    private int[] piecesN = new int[2];
 
     public Game(BoardView view, Class<? extends Player> playerClass1,
                 Class<? extends Player> playerClass2, int options)
@@ -39,17 +39,22 @@ public class Game extends Thread{
             constructor = playerClass2.getDeclaredConstructor(Player.Color.class, Game.class);
             players[1] = constructor.newInstance(Player.Color.BLACK, this);
 
+            piecesN[0] = piecesN[1] = 0;
             for(int x = 0; x < 8; x++)
             {
                 for(int y = 0; y < 3; y++)
                 {
-                    if((x + y) % 2 != 0)
+                    if((x + y) % 2 != 0) {
                         pieces[x][y] = new Men(new Position(x, y), players[1]);
+                        piecesN[1]++;
+                    }
                 }
                 for(int y = 7; y >= 5; y--)
                 {
-                    if((x + y) % 2 != 0)
+                    if((x + y) % 2 != 0) {
                         pieces[x][y] = new Men(new Position(x, y), players[0]);
+                        piecesN[0]++;
+                    }
                 }
             }
 
@@ -78,6 +83,16 @@ public class Game extends Thread{
         return pieces;
     }
 
+    public boolean isOptionEnabled(int option)
+    {
+        return isOptionEnabled(options, option);
+    }
+
+    public static boolean isOptionEnabled(int options, int option)
+    {
+        return ((1 << option) & options) != 0;
+    }
+
     public void setRunning(boolean running)
     {
         this.running = running;
@@ -86,12 +101,12 @@ public class Game extends Thread{
     @Override
     public void run()
     {
-        boolean end = false;
-
-        while(!end)
+        while(piecesN[0] > 0 || piecesN[1] > 0)
         {
             Pair<Position, Position> move;
             Piece piece;
+            Position capturedPiecePos;
+            boolean captured = false;
 
             for(Player player : players)
             {
@@ -102,10 +117,20 @@ public class Game extends Thread{
                     history.add(pieces.clone());
 
                     piece = pieces[source.x][source.y];
-                    piece.moveTo(target, pieces);
+                    capturedPiecePos = piece.moveTo(target, pieces);
+
+                    if(capturedPiecePos != null) {
+                        pieces[capturedPiecePos.x][capturedPiecePos.y] = null;
+                        captured = true;
+
+                        if(player == players[0])
+                            piecesN[1]--;
+                        else
+                            piecesN[0]--;
+                    }
 
                     view.postInvalidate();
-                }while(piece.canJump(options, pieces) && ((1 << obligatoryCapture) & options) != 0);
+                }while(captured && piece.canJump(options, pieces) && isOptionEnabled(obligatoryCapture));
             }
 
             //TODO - end

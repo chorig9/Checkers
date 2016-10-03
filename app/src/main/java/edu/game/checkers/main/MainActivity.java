@@ -17,7 +17,8 @@ public class MainActivity extends AppCompatActivity {
         this.getWindow().setFlags(WindowManager.LayoutParams.FLAG_FULLSCREEN, WindowManager.LayoutParams.FLAG_FULLSCREEN);
 
         BoardView view = new BoardView(this);
-        Game game = new Game(view, PlayerLocal.class, PlayerLocal.class, Game.backwardCapture | Game.obligatoryCapture | Game.flyingKing);
+        int options = Game.backwardCapture | Game.obligatoryCapture | Game.flyingKing;
+        Game game = new Game(view, PlayerLocal.class, PlayerLocal.class, options);
         game.start();
         setContentView(view);
     }

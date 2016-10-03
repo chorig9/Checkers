@@ -1,6 +1,8 @@
 package edu.game.checkers.logic;
 
 import android.util.Pair;
+
+import java.util.ArrayList;
 import java.util.concurrent.CountDownLatch;
 
 public class PlayerLocal extends Player{
@@ -22,7 +24,10 @@ public class PlayerLocal extends Player{
         {
             done.await();
             game.getTouchManager().setUser(null);
-            return new Pair<>(sourcePosition, targetPosition);
+
+            Pair<Position, Position> move = new Pair<>(sourcePosition, targetPosition);
+            sourcePosition = targetPosition = null;
+            return move;
         }
         catch(InterruptedException e)
         {
@@ -33,21 +38,26 @@ public class PlayerLocal extends Player{
         return null;
     }
 
-
-    public void setSource(Position position)
+    // returns valid positions for clicked piece
+    public ArrayList<Position> clicked(Position position)
     {
-        sourcePosition = position;
-    }
-
-    public void setTarget(Position position)
-    {
-        if(sourcePosition != null
-                && getPieces()[sourcePosition.x][sourcePosition.y].isMoveValid(position,
-                game.getOptions(), getPieces()))
+        int x = position.x, y = position.y;
+        if(game.getPieces()[x][y] != null && game.getPieces()[x][y].getOwner() == this &&
+                (!canAnyPieceJump() || (canAnyPieceJump() && game.getPieces()[x][y].canJump(game.getOptions(), game.getPieces()))))
         {
-            targetPosition = position;
-            done.countDown();
+            sourcePosition = position;
+            return game.getPieces()[x][y].getValidPositions(game.getOptions(), game.getPieces());
+        }
+        else
+        {
+            if(sourcePosition != null
+                    && game.getPieces()[sourcePosition.x][sourcePosition.y].isMoveValid(position,
+                    game.getOptions(), game.getPieces()))
+            {
+                targetPosition = position;
+                done.countDown();
+            }
+            return new ArrayList<>();
         }
     }
-
 }
