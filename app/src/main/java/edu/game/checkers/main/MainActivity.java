@@ -1,7 +1,9 @@
 package edu.game.checkers.main;
 
+import android.support.annotation.BoolRes;
 import android.support.v7.app.AppCompatActivity;
 import android.os.Bundle;
+import android.util.Log;
 import android.view.WindowManager;
 
 import edu.game.checkers.R;

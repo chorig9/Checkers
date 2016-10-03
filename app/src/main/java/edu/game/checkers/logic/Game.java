@@ -1,5 +1,6 @@
 package edu.game.checkers.logic;
 
+import android.graphics.Color;
 import android.util.Pair;
 import java.lang.reflect.Constructor;
 import java.util.ArrayList;
@@ -33,11 +34,11 @@ public class Game extends Thread{
         try
         {
             Constructor<? extends Player> constructor;
-            constructor = playerClass1.getDeclaredConstructor(Player.Color.class, Game.class);
-            players[0] = constructor.newInstance(Player.Color.WHITE, this);
+            constructor = playerClass1.getDeclaredConstructor(int.class, Game.class);
+            players[0] = constructor.newInstance(Color.WHITE, this);
 
-            constructor = playerClass2.getDeclaredConstructor(Player.Color.class, Game.class);
-            players[1] = constructor.newInstance(Player.Color.BLACK, this);
+            constructor = playerClass2.getDeclaredConstructor(int.class, Game.class);
+            players[1] = constructor.newInstance(Color.BLACK, this);
 
             piecesN[0] = piecesN[1] = 0;
             for(int x = 0; x < 8; x++)
@@ -90,7 +91,7 @@ public class Game extends Thread{
 
     public static boolean isOptionEnabled(int options, int option)
     {
-        return ((1 << option) & options) != 0;
+        return (option & options) != 0;
     }
 
     public void setRunning(boolean running)
@@ -103,13 +104,13 @@ public class Game extends Thread{
     {
         while(piecesN[0] > 0 || piecesN[1] > 0)
         {
-            Pair<Position, Position> move;
-            Piece piece;
-            Position capturedPiecePos;
-            boolean captured = false;
-
             for(Player player : players)
             {
+                Pair<Position, Position> move;
+                Piece piece;
+                Position capturedPiecePos;
+                boolean captured = false;
+
                 do {
                     move = player.makeMove();
                     Position source = move.first, target = move.second;

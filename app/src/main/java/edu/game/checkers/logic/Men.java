@@ -1,7 +1,6 @@
 package edu.game.checkers.logic;
 
 import android.graphics.Canvas;
-import android.graphics.Color;
 import android.graphics.Paint;
 
 import java.util.ArrayList;
@@ -23,19 +22,24 @@ public class Men extends  Piece{
     @Override
     public void draw(Canvas canvas) {
         Paint paint = new Paint();
-        paint.setColor(Color.RED);
+        paint.setColor(owner.getColor());
 
         int tileSize = canvas.getWidth() / 8;
 
-        canvas.drawRect(position.x * tileSize,position.y * tileSize,
-                (position.x + 1) * tileSize,(position.y + 1) * tileSize,paint);
+        float cx = (float)((position.x + 0.5) * tileSize);
+        float cy = (float)((position.y + 0.5) * tileSize);
+        float radius = (float)(tileSize / 2);
+
+        canvas.drawCircle(cx, cy, radius, paint);
     }
 
     @Override
     public boolean isMoveValid(Position target, int options, Piece[][] pieces) {
-        // simple move by one
-        boolean move = Math.abs(target.x - position.x) == 1 && target.y - position.y == orientation
-                && pieces[target.x][target.y] == null;
+        if(pieces[target.x][target.y] != null)
+            return false;
+
+        // is this a valid simple move
+        boolean move = Math.abs(target.x - position.x) == 1 && target.y - position.y == orientation;
 
         // is backward capture allowed
         boolean backwardJumpAllowed = Game.isOptionEnabled(options, Game.backwardCapture);
@@ -76,25 +80,25 @@ public class Men extends  Piece{
         int forY = position.y + orientation;
         int backY = position.y - orientation;
 
-        for(int x = -1; x <= 1; x+=2)
+        for(int px = -1; px <= 1; px+=2)
         {
-            int px = position.x + x;
-            if(Position.inRange(px) && Position.inRange(forY)
-                    && Position.inRange(px + x) && Position.inRange(forY + orientation)
-                    && pieces[px][forY] != null && pieces[px][forY].getOwner() != owner
-                    && pieces[px + x][forY + orientation] == null)
+            int x = position.x + px;
+            if(Position.inRange(x) && Position.inRange(forY)
+                    && Position.inRange(x + px) && Position.inRange(forY + orientation)
+                    && pieces[x][forY] != null && pieces[x][forY].getOwner() != owner
+                    && pieces[x + px][forY + orientation] == null)
                 return true;
         }
 
         if(Game.isOptionEnabled(options, Game.backwardCapture))
         {
-            for(int x = -1; x <= 1; x+=2)
+            for(int px = -1; px <= 1; px+=2)
             {
-                int px = position.x + x;
-                if(Position.inRange(px) && Position.inRange(backY)
-                        && Position.inRange(px + x) && Position.inRange(backY - orientation)
-                        && pieces[px][backY] != null && pieces[px][backY].getOwner() != owner
-                        && pieces[px + x][backY - orientation] == null)
+                int x = position.x + px;
+                if(Position.inRange(x) && Position.inRange(backY)
+                        && Position.inRange(x + px) && Position.inRange(backY - orientation)
+                        && pieces[x][backY] != null && pieces[x][backY].getOwner() != owner
+                        && pieces[x + px][backY - orientation] == null)
                     return true;
             }
         }
@@ -107,7 +111,7 @@ public class Men extends  Piece{
     {
         Position pos = super.moveTo(position, pieces);
 
-        if(position.y == 7 * orientation)
+        if((orientation == 1 && position.y == 7) || (orientation == - 1 && position.y == 0))
             pieces[position.x][position.y] = new King(position, owner);
 
         return pos;

@@ -57,10 +57,10 @@ public class BoardView extends View{
         for(int x = 0; x < 8; x++){
             for(int y = 0; y < 8; y++){
 
-                if((x + y) % 2 == 0)
-                    paint.setColor(Color.WHITE);
+                if((x + y) % 2 != 0)
+                    paint.setColor(Color.parseColor("#0064A2"));
                 else
-                    paint.setColor(Color.BLACK);
+                    paint.setColor(Color.parseColor("#D8EBFF"));
 
 
                 canvas.drawRect(x * tileSize, y * tileSize,

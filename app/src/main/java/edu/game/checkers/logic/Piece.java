@@ -19,11 +19,10 @@ public abstract class Piece {
     {
         Position capturedPiecePosition = null;
 
-        int minX = Math.min(this.position.x, position.x);
-        int minY = Math.min(this.position.y, position.y);
-        int maxX = Math.max(this.position.x, position.x);
+        int px = (position.x > this.position.x) ? 1 : -1;
+        int py = (position.y > this.position.y) ? 1 : -1;
 
-        for(int x = minX + 1, y = minY + 1; x < maxX; x++, y++)
+        for(int x = this.position.x + px, y = this.position.y + py; x != position.x; x+=px, y+=py)
         {
             if(pieces[x][y] != null)
                 capturedPiecePosition = new Position(x, y);

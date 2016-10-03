@@ -10,7 +10,7 @@ public class PlayerLocal extends Player{
     private volatile Position sourcePosition, targetPosition;
     private CountDownLatch done;
 
-    public PlayerLocal(Color color, Game game)
+    public PlayerLocal(int color, Game game)
     {
         super(color, game);
     }

@@ -4,15 +4,18 @@ import android.util.Pair;
 
 public abstract class Player {
 
-    public enum Color { WHITE, BLACK }
-
-    Color color;
     Game game;
+    int color;
 
-    public Player(Color color, Game game)
+    public Player(int color, Game game)
     {
         this.color = color;
         this.game = game;
+    }
+
+    public int getColor()
+    {
+        return color;
     }
 
     public boolean canAnyPieceJump()
