@@ -44,7 +44,21 @@ public abstract class Piece {
 
     public abstract void draw(Canvas canvas);
 
-    public abstract boolean isMoveValid(Position target, int options, Piece pieces[][]);
+    public boolean isMoveValid(Position target, int options, Piece pieces[][])
+    {
+        boolean obligatoryCapture = Game.isOptionEnabled(options, Game.obligatoryCapture);
+
+        // move is good and: is capturing or capturing is not obligatory or piece cannot jump
+        return isMoveCapturing(target, options, pieces)
+                || ((!obligatoryCapture || !canJump(options, pieces))
+                && isMoveCorrect(target, options, pieces));
+    }
+
+    // checks if move is correct and capturing
+    public abstract boolean isMoveCapturing(Position target, int options, Piece pieces[][]);
+
+    // checks if move is correct but not captures anything
+    public abstract boolean isMoveCorrect(Position target, int options, Piece pieces[][]);
 
     public abstract ArrayList<Position> getValidPositions(int options, Piece pieces[][]);
 

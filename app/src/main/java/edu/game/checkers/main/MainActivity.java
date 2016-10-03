@@ -16,10 +16,13 @@ public class MainActivity extends AppCompatActivity {
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         //Remove notification bar
-        this.getWindow().setFlags(WindowManager.LayoutParams.FLAG_FULLSCREEN, WindowManager.LayoutParams.FLAG_FULLSCREEN);
+        this.getWindow().setFlags(WindowManager.LayoutParams.FLAG_FULLSCREEN,
+                WindowManager.LayoutParams.FLAG_FULLSCREEN);
 
         BoardView view = new BoardView(this);
-        int options = Game.backwardCapture | Game.obligatoryCapture | Game.flyingKing;
+        int options = Game.backwardCapture | Game.obligatoryCapture
+                | Game.flyingKing | Game.optimalCapture;
+
         Game game = new Game(view, PlayerLocal.class, PlayerLocal.class, options);
         game.start();
         setContentView(view);

@@ -36,48 +36,34 @@ public class King extends Piece{
     }
 
     @Override
-    public boolean isMoveValid(Position target, int options, Piece[][] pieces) {
-        if(pieces[target.x][target.y] != null)
-            return false;
-
-        // obligatory jump
-        boolean obligatoryCapture = Game.isOptionEnabled(options, Game.obligatoryCapture);
-
-        boolean jump, move;
+    public boolean isMoveCapturing(Position target, int options, Piece[][] pieces) {
         if(!Game.isOptionEnabled(options, Game.flyingKing))
         {
-            // is this a valid simple move
-            move = Math.abs(target.x - position.x) == 1 && Math.abs(target.y - position.y) == 1;
-
-            // is this a valid jump
-            jump = Math.abs(target.x - position.x) == 2 && Math.abs(target.y - position.y) == 2
-                    && pieces[(target.x + position.x)/2][(target.y + position.y)/2] != null
-                    && pieces[(target.x + position.x)/2][(target.y+position.y)/2].getOwner()!=owner;
+            return pieces[target.x][target.y] == null
+                && Math.abs(target.x - position.x) == 2 && Math.abs(target.y - position.y) == 2
+                && checkForPieces(target, pieces) == PiecesOnWay.One;
         }
         else
         {
-            int piecesInWay = 0;
-            int px = (target.x > position.x) ? 1 : -1;
-            int py = (target.y > position.y) ? 1 : -1;
-
-            for(int x = position.x + px, y = position.y + py; x != target.x; x+=px, y+=py)
-            {
-                if(pieces[x][y] != null && pieces[x][y].getOwner() != owner)
-                    piecesInWay++;
-                else if(pieces[x][y] != null && pieces[x][y].getOwner() == owner)
-                    return false;
-            }
-
-            move = Math.abs(target.x - position.x) == Math.abs(target.y - position.y);
-
-            Piece phantomPiece = new King(new Position(target.x, target.y), owner);
-
-
-            jump = Math.abs(target.x - position.x) == Math.abs(target.y - position.y)
-                    && piecesInWay == 1;
+            return pieces[target.x][target.y] == null
+                && Math.abs(target.x - position.x) == Math.abs(target.y - position.y)
+                && checkForPieces(target, pieces) == PiecesOnWay.One;
         }
+    }
 
-        return ((move && !obligatoryCapture) || (move && !canJump(options, pieces))) || jump;
+    @Override
+    public boolean isMoveCorrect(Position target, int options, Piece[][] pieces) {
+        if(!Game.isOptionEnabled(options, Game.flyingKing))
+        {
+            return pieces[target.x][target.y] == null
+                && Math.abs(target.x - position.x) == 1 && Math.abs(target.y - position.y) == 1;
+        }
+        else
+        {
+            return pieces[target.x][target.y] == null
+                && Math.abs(target.x - position.x) == Math.abs(target.y - position.y)
+                && checkForPieces(target, pieces) == PiecesOnWay.None;
+        }
     }
 
     @Override
@@ -88,11 +74,9 @@ public class King extends Piece{
         {
             for(int k = -1; k <= 1; k += 2)
             {
-                int x = position.x + px;
-                int y = position.y + k * px;
-                if(x != position.x && y != position.y && Position.inRange(x) && Position.inRange(y)
-                        && isMoveValid(new Position(x, y), options, pieces))
-                    positions.add(new Position(x, y));
+                Position pos = new Position(position.x + px, position.y + k * px);
+                if(!pos.equals(position) && pos.isInRange() && isMoveValid(pos, options, pieces))
+                    positions.add(pos);
             }
         }
 
@@ -112,20 +96,34 @@ public class King extends Piece{
         {
             for(int k = -1; k <= 1; k += 2)
             {
-                int x = position.x + px;
-                int y = position.y + k * px;
-                if(Position.inRange(x) && Position.inRange(y)
-                        && Position.inRange(x + px) && Position.inRange(y + k * px)
-                        && Position.inRange(x - px) && Position.inRange(y - k * px)
-                        && pieces[x][y] != null && pieces[x][y].getOwner() != owner
-                        && pieces[x + px][y + k * px] == null
-                        && (pieces[x - px][y - k * px] == null
-                        || (x - px == position.x && y - k * px == position.y)))
+                Position pos = new Position(position.x + px, position.y + k * px);
+                if(!pos.equals(position) && pos.isInRange() && isMoveCapturing(pos, options, pieces))
                     return true;
-
             }
         }
 
         return false;
+    }
+
+    private enum PiecesOnWay {None, One, Multiple}
+
+    private PiecesOnWay checkForPieces(Position target, Piece pieces[][])
+    {
+        boolean pieceOnWay = false;
+        int px = (target.x > position.x) ? 1 : -1;
+        int py = (target.y > position.y) ? 1 : -1;
+
+        for(int x = position.x + px, y = position.y + py; x != target.x; x+=px, y+=py)
+        {
+            if(pieces[x][y] != null)
+            {
+                if(pieces[x][y].getOwner() == owner || pieceOnWay)
+                    return PiecesOnWay.Multiple;
+                else
+                    pieceOnWay = true;
+            }
+        }
+
+        return pieceOnWay ? PiecesOnWay.One : PiecesOnWay.None;
     }
 }

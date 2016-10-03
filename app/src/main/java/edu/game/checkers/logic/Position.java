@@ -23,8 +23,8 @@ public final class Position {
         return this.x == position.x && this.y == position.y;
     }
 
-    public static boolean inRange(int k)
+    public boolean isInRange()
     {
-        return k >= 0 && k < 8;
+        return x >= 0 && x < 8 && y >= 0 && y < 8;
     }
 }

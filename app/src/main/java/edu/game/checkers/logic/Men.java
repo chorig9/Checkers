@@ -34,28 +34,21 @@ public class Men extends  Piece{
     }
 
     @Override
-    public boolean isMoveValid(Position target, int options, Piece[][] pieces) {
-        if(pieces[target.x][target.y] != null)
-            return false;
-
-        // is this a valid simple move
-        boolean move = Math.abs(target.x - position.x) == 1 && target.y - position.y == orientation;
-
+    public boolean isMoveCapturing(Position target, int options, Piece[][] pieces) {
         // is backward capture allowed
         boolean backwardJumpAllowed = Game.isOptionEnabled(options, Game.backwardCapture);
-        // obligatory jump
-        boolean obligatoryCapture = Game.isOptionEnabled(options, Game.obligatoryCapture);
 
-        // is this a valid jump
-        boolean jump = Math.abs(target.x - position.x) == 2
+        return pieces[target.x][target.y] == null && Math.abs(target.x - position.x) == 2
                 && pieces[(target.x + position.x)/2][(target.y + position.y)/2] != null
-                && pieces[(target.x + position.x)/2][(target.y + position.y)/2].getOwner() != owner;
+                && pieces[(target.x + position.x)/2][(target.y + position.y)/2].getOwner() != owner
+                && ((backwardJumpAllowed && Math.abs(target.y - position.y) == 2)
+                || target.y - position.y == 2 * orientation);
+    }
 
-        boolean forwardJump = target.y - position.y == 2 * orientation;
-        boolean backwardJump = Math.abs(target.y - position.y) == 2;
-
-        return ((move && !obligatoryCapture) || (move && !canJump(options, pieces)))
-                || (jump && forwardJump) || (jump && backwardJumpAllowed && backwardJump);
+    @Override
+    public boolean isMoveCorrect(Position target, int options, Piece[][] pieces) {
+        return pieces[target.x][target.y] == null
+                && Math.abs(target.x - position.x) == 1 && target.y - position.y == orientation;
     }
 
     @Override
@@ -66,9 +59,9 @@ public class Men extends  Piece{
         {
             for(int y = position.y - 2; y <= position.y + 2; y++)
             {
-                if(x != position.x && y != position.y && Position.inRange(x) && Position.inRange(y)
-                        && isMoveValid(new Position(x, y), options, pieces))
-                    positions.add(new Position(x, y));
+                Position pos = new Position(x, y);
+                if(!pos.equals(position) && pos.isInRange() && isMoveValid(pos, options, pieces))
+                    positions.add(pos);
             }
         }
 
@@ -77,28 +70,22 @@ public class Men extends  Piece{
 
     @Override
     public boolean canJump(int options, Piece[][] pieces) {
-        int forY = position.y + orientation;
-        int backY = position.y - orientation;
+        int forY = position.y + 2 * orientation;
+        int backY = position.y - 2 * orientation;
 
-        for(int px = -1; px <= 1; px+=2)
+        for(int px = -2; px <= 2; px+=4)
         {
-            int x = position.x + px;
-            if(Position.inRange(x) && Position.inRange(forY)
-                    && Position.inRange(x + px) && Position.inRange(forY + orientation)
-                    && pieces[x][forY] != null && pieces[x][forY].getOwner() != owner
-                    && pieces[x + px][forY + orientation] == null)
+            Position pos = new Position(position.x + px, forY);
+            if(pos.isInRange() && isMoveCapturing(pos, options, pieces))
                 return true;
         }
 
         if(Game.isOptionEnabled(options, Game.backwardCapture))
         {
-            for(int px = -1; px <= 1; px+=2)
+            for(int px = -2; px <= 2; px+=4)
             {
-                int x = position.x + px;
-                if(Position.inRange(x) && Position.inRange(backY)
-                        && Position.inRange(x + px) && Position.inRange(backY - orientation)
-                        && pieces[x][backY] != null && pieces[x][backY].getOwner() != owner
-                        && pieces[x + px][backY - orientation] == null)
+                Position pos = new Position(position.x + px, backY);
+                if(pos.isInRange() && isMoveCapturing(pos, options, pieces))
                     return true;
             }
         }
@@ -106,6 +93,7 @@ public class Men extends  Piece{
         return false;
     }
 
+    // additionally men to king
     @Override
     public Position moveTo(Position position, Piece pieces[][])
     {

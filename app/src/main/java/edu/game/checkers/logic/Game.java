@@ -12,7 +12,8 @@ public class Game extends Thread{
 
     public static final int obligatoryCapture = 1,
                             backwardCapture = 2,
-                            flyingKing = 4;
+                            flyingKing = 4,
+                            optimalCapture = 9; // only make sense with obligatory capture
 
     private Player[] players = new Player[2];
     private Piece[][] pieces = new Piece[8][8];
