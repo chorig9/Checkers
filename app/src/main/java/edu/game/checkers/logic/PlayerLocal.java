@@ -38,12 +38,21 @@ public class PlayerLocal extends Player{
         return null;
     }
 
-    // returns valid positions for clicked piece
+    // returns valid positions for clicked piece and set sourcePosition ot targetPosition
     public ArrayList<Position> clicked(Position position)
     {
+        boolean optimalCapture = game.isOptionEnabled(Game.optimalCapture);
         int x = position.x, y = position.y;
-        if(game.getPieces()[x][y] != null && game.getPieces()[x][y].getOwner() == this &&
-                (!canAnyPieceJump() || (canAnyPieceJump() && game.getPieces()[x][y].canJump(game.getOptions(), game.getPieces()))))
+
+        int options = game.getOptions();
+        Piece[][] pieces = game.getPieces();
+        Piece piece = pieces[x][y];
+
+        // if no piece can jump or this piece can jump and jump is optimal
+        if(piece != null && piece.getOwner() == this
+                && (!canAnyPieceJump() || (piece.canJump(options, pieces)
+                    && (!optimalCapture || getMaxNumberOfCaptures()
+                    == piece.getMaxNumberOfCaptures(options, pieces)))))
         {
             sourcePosition = position;
             return game.getPieces()[x][y].getValidPositions(game.getOptions(), game.getPieces());

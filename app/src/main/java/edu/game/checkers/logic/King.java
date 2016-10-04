@@ -4,8 +4,6 @@ import android.graphics.Canvas;
 import android.graphics.Color;
 import android.graphics.Paint;
 
-import java.util.ArrayList;
-
 public class King extends Piece{
 
     public King(Position position, Player owner)
@@ -67,20 +65,13 @@ public class King extends Piece{
     }
 
     @Override
-    public ArrayList<Position> getValidPositions(int options, Piece[][] pieces) {
-        ArrayList<Position> positions = new ArrayList<>();
+    public Position getOptimalCapture(int options, Piece[][] pieces) {
+        return null;
+    }
 
-        for(int px = -7; px <= 7; px++)
-        {
-            for(int k = -1; k <= 1; k += 2)
-            {
-                Position pos = new Position(position.x + px, position.y + k * px);
-                if(!pos.equals(position) && pos.isInRange() && isMoveValid(pos, options, pieces))
-                    positions.add(pos);
-            }
-        }
-
-        return positions;
+    @Override
+    public int getNumberOfCaptures(Position target, int options, Piece[][] pieces) {
+        return 0;
     }
 
     @Override

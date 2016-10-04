@@ -3,8 +3,6 @@ package edu.game.checkers.logic;
 import android.graphics.Canvas;
 import android.graphics.Paint;
 
-import java.util.ArrayList;
-
 public class Men extends  Piece{
 
     private int orientation;
@@ -35,7 +33,6 @@ public class Men extends  Piece{
 
     @Override
     public boolean isMoveCapturing(Position target, int options, Piece[][] pieces) {
-        // is backward capture allowed
         boolean backwardJumpAllowed = Game.isOptionEnabled(options, Game.backwardCapture);
 
         return pieces[target.x][target.y] == null && Math.abs(target.x - position.x) == 2
@@ -52,20 +49,12 @@ public class Men extends  Piece{
     }
 
     @Override
-    public ArrayList<Position> getValidPositions(int options, Piece[][] pieces) {
-        ArrayList<Position> positions = new ArrayList<>();
+    public int getNumberOfCaptures(Position target, int options, Piece[][] pieces) {
+        Piece[][] phantom = pieces.clone();
 
-        for(int x = position.x - 2; x <= position.x + 2; x++)
-        {
-            for(int y = position.y - 2; y <= position.y + 2; y++)
-            {
-                Position pos = new Position(x, y);
-                if(!pos.equals(position) && pos.isInRange() && isMoveValid(pos, options, pieces))
-                    positions.add(pos);
-            }
-        }
+        int n = 0;
 
-        return positions;
+        return n;
     }
 
     @Override
@@ -93,7 +82,7 @@ public class Men extends  Piece{
         return false;
     }
 
-    // additionally men to king
+    // additionally converts men to king
     @Override
     public Position moveTo(Position position, Piece pieces[][])
     {
