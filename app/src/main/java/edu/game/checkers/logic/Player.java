@@ -20,9 +20,6 @@ public abstract class Player {
 
     public boolean canAnyPieceJump()
     {
-        if(!game.isOptionEnabled(Game.obligatoryCapture))
-            return false;
-
         for(int x = 0; x <8; x++)
         {
             for(int y = 0; y < 8; y++)

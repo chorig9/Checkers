@@ -26,7 +26,7 @@ public class Men extends  Piece{
 
         float cx = (float)((position.x + 0.5) * tileSize);
         float cy = (float)((position.y + 0.5) * tileSize);
-        float radius = (float)(tileSize / 2);
+        float radius = (float)(0.9 * tileSize / 2);
 
         canvas.drawCircle(cx, cy, radius, paint);
     }

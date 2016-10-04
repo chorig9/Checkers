@@ -1,7 +1,6 @@
 package edu.game.checkers.logic;
 
 import android.graphics.Canvas;
-
 import java.util.ArrayList;
 
 public abstract class Piece{
@@ -44,7 +43,6 @@ public abstract class Piece{
 
     public boolean isMoveValid(Position target, int options, Piece pieces[][])
     {
-        boolean obligatoryCapture = Game.isOptionEnabled(options, Game.obligatoryCapture);
         boolean optimalCapture = Game.isOptionEnabled(options, Game.optimalCapture);
 
         // move is good and: (is capturing and optimal)
@@ -52,7 +50,7 @@ public abstract class Piece{
         return (isMoveCapturing(target, options, pieces)
                 && (!optimalCapture || optimalMoveCaptures(options, pieces)
                     == thisMoveCaptures(target, options, pieces)))
-                || ((!obligatoryCapture || !canJump(options, pieces))
+                || (!canJump(options, pieces)
                 && isMoveCorrect(target, options, pieces));
     }
 
@@ -104,7 +102,7 @@ public abstract class Piece{
         Position capturedPiece = thisPiece.moveTo(target, copyPieces);
         copyPieces[capturedPiece.x][capturedPiece.y] = null;
 
-        n += optimalMoveCaptures(options, copyPieces);
+        n += thisPiece.optimalMoveCaptures(options, copyPieces);
 
         return n;
     }

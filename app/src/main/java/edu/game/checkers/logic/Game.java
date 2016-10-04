@@ -10,10 +10,9 @@ import edu.game.checkers.main.TouchManager;
 
 public class Game extends Thread{
 
-    public static final int obligatoryCapture = 1,
-                            backwardCapture = 2,
-                            flyingKing = 4,
-                            optimalCapture = 9; // only make sense with obligatory capture
+    public static final int backwardCapture = 1,
+                            flyingKing = 2,
+                            optimalCapture = 4;
 
     private Player[] players = new Player[2];
     private Piece[][] pieces = new Piece[8][8];
@@ -102,7 +101,7 @@ public class Game extends Thread{
                     }
 
                     view.postInvalidate();
-                }while(captured && piece.canJump(options, pieces) && isOptionEnabled(obligatoryCapture));
+                }while(captured && piece.canJump(options, pieces));
                 // TODO - what if obligatoryCapture is enabled and player wants to continue capturing
             }
 
