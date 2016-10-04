@@ -65,13 +65,9 @@ public class King extends Piece{
     }
 
     @Override
-    public Position getOptimalCapture(int options, Piece[][] pieces) {
-        return null;
-    }
-
-    @Override
-    public int getNumberOfCaptures(Position target, int options, Piece[][] pieces) {
-        return 0;
+    public King copy()
+    {
+        return new King(new Position(position.x, position.y), owner);
     }
 
     @Override

@@ -70,36 +70,6 @@ public class Game extends Thread{
 
     }
 
-    public int getOptions()
-    {
-        return options;
-    }
-
-    public TouchManager getTouchManager()
-    {
-        return touchManager;
-    }
-
-    public Piece[][] getPieces()
-    {
-        return pieces;
-    }
-
-    public boolean isOptionEnabled(int option)
-    {
-        return isOptionEnabled(options, option);
-    }
-
-    public static boolean isOptionEnabled(int options, int option)
-    {
-        return (option & options) != 0;
-    }
-
-    public void setRunning(boolean running)
-    {
-        this.running = running;
-    }
-
     @Override
     public void run()
     {
@@ -133,12 +103,41 @@ public class Game extends Thread{
 
                     view.postInvalidate();
                 }while(captured && piece.canJump(options, pieces) && isOptionEnabled(obligatoryCapture));
+                // TODO - what if obligatoryCapture is enabled and player wants to continue capturing
             }
 
             //TODO - end
         }
     }
 
+    public int getOptions()
+    {
+        return options;
+    }
 
+    public TouchManager getTouchManager()
+    {
+        return touchManager;
+    }
+
+    public Piece[][] getPieces()
+    {
+        return pieces;
+    }
+
+    public boolean isOptionEnabled(int option)
+    {
+        return isOptionEnabled(options, option);
+    }
+
+    public static boolean isOptionEnabled(int options, int option)
+    {
+        return (option & options) != 0;
+    }
+
+    public void setRunning(boolean running)
+    {
+        this.running = running;
+    }
 
 }

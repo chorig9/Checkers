@@ -52,7 +52,7 @@ public class PlayerLocal extends Player{
         if(piece != null && piece.getOwner() == this
                 && (!canAnyPieceJump() || (piece.canJump(options, pieces)
                     && (!optimalCapture || getMaxNumberOfCaptures()
-                    == piece.getMaxNumberOfCaptures(options, pieces)))))
+                    == piece.optimalMoveCaptures(options, pieces)))))
         {
             sourcePosition = position;
             return game.getPieces()[x][y].getValidPositions(game.getOptions(), game.getPieces());

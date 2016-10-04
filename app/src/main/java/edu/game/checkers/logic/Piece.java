@@ -4,7 +4,7 @@ import android.graphics.Canvas;
 
 import java.util.ArrayList;
 
-public abstract class Piece {
+public abstract class Piece{
 
     Position position;
     Player owner;
@@ -50,14 +50,18 @@ public abstract class Piece {
         // move is good and: (is capturing and optimal)
         // or capturing is not obligatory or piece cannot jump
         return (isMoveCapturing(target, options, pieces)
-                && (!optimalCapture || getOptimalCapture(options, pieces).equals(target)))
+                && (!optimalCapture || optimalMoveCaptures(options, pieces)
+                    == thisMoveCaptures(target, options, pieces)))
                 || ((!obligatoryCapture || !canJump(options, pieces))
                 && isMoveCorrect(target, options, pieces));
     }
-    // returns move which is optimal(should only be called when piece can jump)
-    public Position getOptimalCapture(int options, Piece[][] pieces) {
+
+    // returns how many pieces can this piece capture at most
+    // for every capturing move from this piece's position thisMoveCaptures() is called
+    // the above function moves piece to destination(on copy of original pieces table) and
+    // calls this function again (for new position) - mutual recursion
+    public int optimalMoveCaptures(int options, Piece[][] pieces) {
         int max = 0;
-        Position optimal = null;
 
         for(int x = -7; x <= 7; x++)
         {
@@ -66,17 +70,43 @@ public abstract class Piece {
                 Position pos = new Position(position.x + x, position.y + k * x);
                 if(!pos.equals(position) && pos.isInRange() && isMoveCapturing(pos, options, pieces))
                 {
-                    int n = getNumberOfCaptures(pos, options, pieces);
+                    int n = thisMoveCaptures(pos, options, pieces);
 
                     if(n > max)
-                    {
                         max = n;
-                        optimal = pos;
-                    }
                 }
             }
         }
-        return optimal;
+        return max;
+    }
+
+    // returns how many pieces can by captured by performing this move
+    // should only be called when move is capturing
+    // therefore returns at least 1
+    public int thisMoveCaptures(Position target, int options, Piece pieces[][])
+    {
+        // n = 1 : "recursion base"
+        int n = 1;
+        Piece[][] copyPieces = new Piece[8][8];
+
+        for(int i = 0; i < 8; i++)
+        {
+            for(int j = 0; j < 8; j++)
+            {
+                if(pieces[i][j] == null)
+                    copyPieces[i][j] = null;
+                else
+                    copyPieces[i][j] = pieces[i][j].copy();
+            }
+        }
+
+        Piece thisPiece = copyPieces[position.x][position.y];
+        Position capturedPiece = thisPiece.moveTo(target, copyPieces);
+        copyPieces[capturedPiece.x][capturedPiece.y] = null;
+
+        n += optimalMoveCaptures(options, copyPieces);
+
+        return n;
     }
 
     public ArrayList<Position> getValidPositions(int options, Piece pieces[][])
@@ -96,7 +126,6 @@ public abstract class Piece {
         return positions;
     }
 
-
     public abstract void draw(Canvas canvas);
 
     // checks if move is correct and capturing
@@ -105,8 +134,7 @@ public abstract class Piece {
     // checks if move is correct but not captures anything
     public abstract boolean isMoveCorrect(Position target, int options, Piece pieces[][]);
 
-    // returns how many pieces can by captured by performing this move
-    public abstract int getNumberOfCaptures(Position target, int options, Piece pieces[][]);
-
     public abstract boolean canJump(int options, Piece pieces[][]);
+
+    public abstract Piece copy();
 }

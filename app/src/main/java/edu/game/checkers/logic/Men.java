@@ -49,15 +49,6 @@ public class Men extends  Piece{
     }
 
     @Override
-    public int getNumberOfCaptures(Position target, int options, Piece[][] pieces) {
-        Piece[][] phantom = pieces.clone();
-
-        int n = 0;
-
-        return n;
-    }
-
-    @Override
     public boolean canJump(int options, Piece[][] pieces) {
         int forY = position.y + 2 * orientation;
         int backY = position.y - 2 * orientation;
@@ -92,5 +83,11 @@ public class Men extends  Piece{
             pieces[position.x][position.y] = new King(position, owner);
 
         return pos;
+    }
+
+    @Override
+    public Men copy()
+    {
+        return new Men(new Position(position.x, position.y), owner);
     }
 }

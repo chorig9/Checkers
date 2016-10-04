@@ -47,7 +47,7 @@ public abstract class Player {
                 if(piece != null && piece.getOwner() == this
                     && piece.canJump(game.getOptions(), game.getPieces()))
                 {
-                    int n = piece.getMaxNumberOfCaptures(game.getOptions(), game.getPieces());
+                    int n = piece.optimalMoveCaptures(game.getOptions(), game.getPieces());
 
                     max = (n > max) ? n : max;
                 }
