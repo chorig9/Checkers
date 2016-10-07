@@ -7,4 +7,8 @@
     <string name="flying_king">Flying king</string>
     <string name="optimal_capture">Optimal capture</string>
     <string name="menu_header">Menu</string>
+    <string name="select_game">Select game</string>
+    <string name="local">Local</string>
+    <string name="internet">Internet</string>
+    <string name="ai">AI</string>
 </resources>

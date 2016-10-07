@@ -6,6 +6,8 @@ import android.support.v7.app.AppCompatActivity;
 import android.os.Bundle;
 import android.view.View;
 import android.view.WindowManager;
+import android.widget.ViewFlipper;
+
 import edu.game.checkers.R;
 import edu.game.checkers.logic.Game;
 import edu.game.checkers.logic.PlayerLocal;
@@ -41,9 +43,9 @@ public class MainActivity extends AppCompatActivity {
     }
 
     public void startGame(View view) {
-        Intent gameIntent = new Intent(this, GameActivity.class);
-        gameIntent.putExtra("options", options);
-        startActivity(gameIntent);
+        Intent selectTypeIntent = new Intent(this, SelectTypeActivity.class);
+        selectTypeIntent.putExtra("options", options);
+        startActivity(selectTypeIntent);
     }
 
     public void showOptions(View view) {

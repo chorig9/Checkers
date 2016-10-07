@@ -1,16 +1,16 @@
 <?xml version="1.0" encoding="utf-8"?>
 <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
-        xmlns:tools="http://schemas.android.com/tools"
-        android:layout_width="match_parent"
-        android:layout_height="match_parent"
-        android:orientation="vertical"
-        tools:context=".main.MainActivity">
+    xmlns:tools="http://schemas.android.com/tools"
+    android:orientation="vertical"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    tools:context=".main.SelectTypeActivity">
 
     <TextView
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:textSize="55sp"
-        android:text="@string/menu_header"
+        android:text="@string/select_game"
         android:textStyle="bold"
         android:gravity="center_horizontal"
         android:textColor="#1c7e16"
@@ -27,31 +27,25 @@
             android:layout_height="60dp"
             android:layout_marginBottom="20dp"
             android:layout_marginTop="55dp"
-            android:text="@string/play"
-            android:onClick="startGame"/>
+            android:text="@string/local"
+            android:onClick="selectGame"
+            android:tag="edu.game.checkers.logic.PlayerLocal"/>
 
         <Button
             android:layout_width="match_parent"
             android:layout_height="60dp"
             android:layout_marginBottom="20dp"
-            android:text="@string/options"
-            android:onClick="showOptions"/>
+            android:text="@string/internet"
+            android:onClick="selectGame"
+            android:tag="edu.game.checkers.logic.PlayerNetwork"/>
 
         <Button
             android:layout_width="match_parent"
             android:layout_height="60dp"
-            android:text="@string/learn" />
+            android:text="@string/ai"
+            android:onClick="selectGame"
+            android:tag="edu.game.checkers.logic.PlayerAI"/>
 
     </LinearLayout>
+
 </LinearLayout>
-
-
-
-
-
-
-
-
-
-
-

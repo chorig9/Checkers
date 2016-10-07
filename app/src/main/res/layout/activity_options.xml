@@ -24,8 +24,7 @@
             android:textSize="23sp"
             android:layout_alignParentLeft="true"
             android:layout_alignParentStart="true"
-            android:layout_toStartOf="@id/checkbox_backward"
-            android:layout_toLeftOf="@id/checkbox_backward"/>
+            />
         <CheckBox
             android:id="@+id/checkbox_backward"
             android:layout_width="wrap_content"
@@ -49,8 +48,7 @@
             android:textSize="23sp"
             android:layout_alignParentLeft="true"
             android:layout_alignParentStart="true"
-            android:layout_toStartOf="@id/checkbox_flying"
-            android:layout_toLeftOf="@id/checkbox_flying"/>
+            />
         <CheckBox
             android:id="@+id/checkbox_flying"
             android:layout_width="wrap_content"
@@ -72,9 +70,7 @@
             android:text = "@string/optimal_capture"
             android:textSize="23sp"
             android:layout_alignParentLeft="true"
-            android:layout_alignParentStart="true"
-            android:layout_toStartOf="@id/checkbox_optimal"
-            android:layout_toLeftOf="@id/checkbox_optimal"/>
+            android:layout_alignParentStart="true" />
         <CheckBox
             android:id="@+id/checkbox_optimal"
             android:layout_width="wrap_content"
