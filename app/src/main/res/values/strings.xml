@@ -1,3 +1,10 @@
 <resources>
     <string name="app_name">Checkers</string>
+    <string name="play">Play</string>
+    <string name="options">Options</string>
+    <string name="learn">Learn</string>
+    <string name="backward_capture">Backward capture</string>
+    <string name="flying_king">Flying king</string>
+    <string name="optimal_capture">Optimal capture</string>
+    <string name="menu_header">Menu</string>
 </resources>

@@ -85,6 +85,7 @@ public class Game extends Thread{
                     move = player.makeMove();
                     Position source = move.first, target = move.second;
 
+                    // TODO
                     history.add(pieces.clone());
 
                     piece = pieces[source.x][source.y];
@@ -102,7 +103,6 @@ public class Game extends Thread{
 
                     view.postInvalidate();
                 }while(captured && piece.canJump(options, pieces));
-                // TODO - what if obligatoryCapture is enabled and player wants to continue capturing
             }
 
             //TODO - end
@@ -114,17 +114,17 @@ public class Game extends Thread{
         return options;
     }
 
-    public TouchManager getTouchManager()
+    TouchManager getTouchManager()
     {
         return touchManager;
     }
 
-    public Piece[][] getPieces()
+    Piece[][] getPieces()
     {
         return pieces;
     }
 
-    public boolean isOptionEnabled(int option)
+    boolean isOptionEnabled(int option)
     {
         return isOptionEnabled(options, option);
     }
