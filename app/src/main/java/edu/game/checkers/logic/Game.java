@@ -78,17 +78,13 @@ public class Game extends Thread{
                 do {
                     move = player.makeMove();
                     Position source = move.first, target = move.second;
+                    piece = pieces[source.x][source.y];
 
                     // TODO - clone is not working
                     history.add(pieces.clone());
 
-                    piece = pieces[source.x][source.y];
-                    capturedPiecePos = piece.moveTo(target, pieces);
-
-                    if(capturedPiecePos != null) {
-                        pieces[capturedPiecePos.x][capturedPiecePos.y] = null;
-                        captured = true;
-                    }
+                    captured = piece.isMoveCapturing(target, options, pieces);
+                    piece.moveTo(target, pieces);
 
                     view.postInvalidate();
                 }while(captured && piece.canJump(options, pieces));

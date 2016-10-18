@@ -23,6 +23,7 @@
         android:orientation="vertical">
 
         <Button
+            android:id="@+id/local"
             android:layout_width="match_parent"
             android:layout_height="60dp"
             android:layout_marginBottom="20dp"
@@ -32,14 +33,16 @@
             android:tag="edu.game.checkers.logic.PlayerLocal"/>
 
         <Button
+            android:id="@+id/network"
             android:layout_width="match_parent"
             android:layout_height="60dp"
             android:layout_marginBottom="20dp"
-            android:text="@string/internet"
+            android:text="@string/network"
             android:onClick="selectGame"
             android:tag="edu.game.checkers.logic.PlayerNetwork"/>
 
         <Button
+            android:id="@+id/ai"
             android:layout_width="match_parent"
             android:layout_height="60dp"
             android:text="@string/ai"

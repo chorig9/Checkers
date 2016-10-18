@@ -9,6 +9,8 @@
     <string name="menu_header">Menu</string>
     <string name="select_game">Select game</string>
     <string name="local">Local</string>
-    <string name="internet">Internet</string>
+    <string name="network">Network</string>
     <string name="ai">AI</string>
+    <string name="enter_username">Enter username</string>
+    <string name="start_network">Start</string>
 </resources>

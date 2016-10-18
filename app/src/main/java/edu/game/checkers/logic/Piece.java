@@ -14,18 +14,13 @@ public abstract class Piece{
         this.owner = owner;
     }
 
-    public Position moveTo(Position position, Piece pieces[][])
+    public void moveTo(Position position, Piece pieces[][])
     {
-        Position capturedPiecePosition = null;
-
-        int px = (position.x > this.position.x) ? 1 : -1;
-        int py = (position.y > this.position.y) ? 1 : -1;
-
-        for(int x = this.position.x + px, y = this.position.y + py; x != position.x; x+=px, y+=py)
-        {
-            if(pieces[x][y] != null)
-                capturedPiecePosition = new Position(x, y);
-        }
+        // if this move is capturing this variable holds position of captured piece
+        // isMoveCapturing function wasn't used because it depends on game options
+        // which are unknown in this method
+        // otherwise it is null
+        Position capturedPiecePosition = getCapturedPiecePosition(position, pieces);
 
         pieces[position.x][position.y] = pieces[this.position.x][this.position.y];
         pieces[this.position.x][this.position.y] = null;
@@ -33,7 +28,8 @@ public abstract class Piece{
         this.position.x = position.x;
         this.position.y = position.y;
 
-        return capturedPiecePosition;
+        if(capturedPiecePosition != null)
+            pieces[capturedPiecePosition.x][capturedPiecePosition.y] = null;
     }
 
     public Player getOwner()
@@ -99,8 +95,7 @@ public abstract class Piece{
         }
 
         Piece thisPiece = copyPieces[position.x][position.y];
-        Position capturedPiece = thisPiece.moveTo(target, copyPieces);
-        copyPieces[capturedPiece.x][capturedPiece.y] = null;
+        thisPiece.moveTo(target, copyPieces);
 
         n += thisPiece.optimalMoveCaptures(options, copyPieces);
 
@@ -122,6 +117,22 @@ public abstract class Piece{
         }
 
         return positions;
+    }
+
+    public Position getCapturedPiecePosition(Position position, Piece[][] pieces)
+    {
+        Position capturedPiecePosition = null;
+
+        int px = (position.x > this.position.x) ? 1 : -1;
+        int py = (position.y > this.position.y) ? 1 : -1;
+
+        for(int x = this.position.x + px, y = this.position.y + py; x != position.x; x+=px, y+=py)
+        {
+            if(pieces[x][y] != null)
+                capturedPiecePosition = new Position(x, y);
+        }
+
+        return capturedPiecePosition;
     }
 
     public abstract void draw(Canvas canvas);

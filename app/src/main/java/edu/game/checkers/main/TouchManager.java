@@ -43,7 +43,7 @@ public class TouchManager implements View.OnTouchListener{
 
             return true;
         }
-        catch(ClassCastException e) /// TODO-??????
+        catch(ClassCastException e)
         {
             return false;
         }
