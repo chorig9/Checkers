@@ -1,6 +1,7 @@
 package edu.game.checkers.logic;
 
 import android.graphics.Canvas;
+import android.graphics.Color;
 import android.graphics.Paint;
 
 public class Men extends  Piece{
@@ -11,7 +12,7 @@ public class Men extends  Piece{
     {
         super(position, owner);
 
-        if(position.y > 4)
+        if(owner.color == Color.WHITE)
             orientation = -1;
         else
             orientation = 1;
@@ -20,7 +21,7 @@ public class Men extends  Piece{
     @Override
     public void draw(Canvas canvas) {
         Paint paint = new Paint();
-        paint.setColor(owner.getColor());
+        paint.setColor(owner.color);
 
         int tileSize = canvas.getWidth() / 8;
 
@@ -49,7 +50,7 @@ public class Men extends  Piece{
     }
 
     @Override
-    public boolean canJump(int options, Piece[][] pieces) {
+    public boolean canCapture(int options, Piece[][] pieces) {
         int forY = position.y + 2 * orientation;
         int backY = position.y - 2 * orientation;
 

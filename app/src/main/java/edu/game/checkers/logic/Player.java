@@ -1,21 +1,26 @@
 package edu.game.checkers.logic;
 
-import android.util.Pair;
+public abstract class Player{
 
-public abstract class Player {
-
-    Game game;
-    int color;
+    final Game game;
+    final int color;
+    boolean myTurn;
 
     public Player(int color, Game game)
     {
-        this.color = color;
         this.game = game;
+        this.color = color;
+        this.myTurn = false;
     }
 
-    public int getColor()
+    public void turnOn()
     {
-        return color;
+        myTurn = true;
+    }
+
+    public void turnOff()
+    {
+        myTurn = false;
     }
 
     public boolean canAnyPieceJump()
@@ -25,7 +30,7 @@ public abstract class Player {
             for(int y = 0; y < 8; y++)
             {
                 if(game.getPieces()[x][y] != null && game.getPieces()[x][y].getOwner() == this
-                    && game.getPieces()[x][y].canJump(game.getOptions(), game.getPieces()))
+                    && game.getPieces()[x][y].canCapture(game.getOptions(), game.getPieces()))
                     return true;
             }
         }
@@ -42,7 +47,7 @@ public abstract class Player {
             {
                 Piece piece = game.getPieces()[x][y];
                 if(piece != null && piece.getOwner() == this
-                    && piece.canJump(game.getOptions(), game.getPieces()))
+                    && piece.canCapture(game.getOptions(), game.getPieces()))
                 {
                     int n = piece.optimalMoveCaptures(game.getOptions(), game.getPieces());
 
@@ -52,7 +57,5 @@ public abstract class Player {
         }
         return max;
     }
-
-    public abstract Pair<Position, Position> makeMove();
 
 }

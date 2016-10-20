@@ -25,10 +25,6 @@ public class PlayerNetwork extends Player{
         this.out = out;
     }
 
-    @Override
-    public Pair<Position, Position> makeMove() {
-        return null;
-    }
 
 
 }

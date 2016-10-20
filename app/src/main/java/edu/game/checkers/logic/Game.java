@@ -14,14 +14,31 @@ public class Game extends Thread{
                             flyingKing = 2,
                             optimalCapture = 4;
 
+    private class State {
+
+        Piece[][] pieces;
+        Position selectedPiecePosition;
+        boolean moved;
+        int currentPlayer;
+
+        State(Piece[][] pieces, Position selectedPiecePosition, boolean moved, int currentPlayer)
+        {
+            this.pieces = pieces;
+            this.selectedPiecePosition = selectedPiecePosition;
+            this.moved = moved;
+            this.currentPlayer = currentPlayer;
+        }
+    }
+
     private Player[] players = new Player[2];
-    private int currentPlayer;
+    private int currentPlayer = 0;
+    private Piece selectedPiece;
+    private boolean moved = false; // have player moved any piece in this turn(is it multiple capture)?
     private Piece[][] pieces = new Piece[8][8];
     private BoardView view;
     private int options;
-    private ArrayList<Piece[][]> history = new ArrayList<>();
-    private TouchManager touchManager = new TouchManager();
-    private boolean running = true;
+    private ArrayList<State> history = new ArrayList<>();
+    final TouchManager touchManager = new TouchManager();
 
     public Game(BoardView view, Class<? extends Player> playerClass1,
                 Class<? extends Player> playerClass2, int options)
@@ -56,6 +73,8 @@ public class Game extends Thread{
 
             view.setPieces(pieces);
             view.postInvalidate();
+
+            players[currentPlayer].turnOn();
         }
         catch(Exception e)
         {
@@ -64,37 +83,62 @@ public class Game extends Thread{
 
     }
 
-    @Override
-    public void run()
+    public void selectPiece(Position position)
     {
-        while(!isEndOfGame())
+        selectedPiece = pieces[position.x][position.y];
+    }
+
+    public void showHints()
+    {
+        view.setHints(selectedPiece.getValidPositions(options, pieces));
+        view.postInvalidate();
+    }
+
+    public boolean canBeSelected(Position position)
+    {
+        boolean optimalCapture = isOptionEnabled(Game.optimalCapture);
+
+        Piece piece = pieces[position.x][position.y];
+
+        // if no piece can jump or this piece can jump and jump is optimal
+        return !moved && piece != null && piece.getOwner() == players[currentPlayer]
+                && (!piece.getOwner().canAnyPieceJump() || (piece.canCapture(options, pieces)
+                && (!optimalCapture || piece.getOwner().getMaxNumberOfCaptures()
+                == piece.optimalMoveCaptures(options, pieces))));
+    }
+
+    public void moveSelectedPiece(Position position)
+    {
+        if(selectedPiece != null && selectedPiece.isMoveValid(position, options, pieces))
         {
-            for(Player player : players)
+            saveState();
+
+            boolean captured = selectedPiece.isMoveCapturing(position, options, pieces);
+            selectedPiece.moveTo(position, pieces);
+            view.setHints(null);
+            view.postInvalidate();
+
+            if(!selectedPiece.canCapture(options, pieces) || !captured)
+                nextTurn();
+
+            if(isGameOver())
             {
-                Pair<Position, Position> move;
-                Piece piece;
-                Position capturedPiecePos;
-                boolean captured = false;
 
-                do {
-                    move = player.makeMove();
-                    Position source = move.first, target = move.second;
-                    piece = pieces[source.x][source.y];
-
-                    saveState();
-
-                    captured = piece.isMoveCapturing(target, options, pieces);
-                    piece.moveTo(target, pieces);
-
-                    view.postInvalidate();
-                }while(captured && piece.canJump(options, pieces));
             }
-
-            //TODO - end
         }
     }
 
-    private boolean isEndOfGame()
+    public void nextTurn()
+    {
+        moved = false;
+        selectedPiece = null;
+
+        players[currentPlayer].turnOff();
+        currentPlayer ^= 1;
+        players[currentPlayer].turnOn();
+    }
+
+    private boolean isGameOver()
     {
         //TODO
         return false;
@@ -115,39 +159,41 @@ public class Game extends Thread{
             }
         }
 
-        history.add(copyPieces);
+        history.add(new State(copyPieces, selectedPiece.position.copy(), moved, currentPlayer));
     }
 
-    public void moveBack()
+    public void undoMove()
     {
         if(history.size() == 0)
             return;
 
-        Piece[][] previousState = history.get(history.size() - 1);
-        history.remove(previousState);
+        State pastState = history.get(history.size() - 1);
 
-        for(int i = 0; i < 8; i++)
+        moved = pastState.moved;
+
+        if(currentPlayer != pastState.currentPlayer)
         {
-            for(int j = 0; j < 8; j++)
-            {
-                if(previousState[i][j] == null)
-                    pieces[i][j] = null;
-                else
-                    pieces[i][j] = previousState[i][j];
-            }
+            currentPlayer = pastState.currentPlayer;
+            players[currentPlayer].turnOn();
+            players[currentPlayer ^ 1].turnOff();
         }
 
-        view.postInvalidate();
+        pieces = pastState.pieces;
+        view.setPieces(pieces);
+
+        selectedPiece = pieces[pastState.selectedPiecePosition.x][pastState.selectedPiecePosition.y];
+
+        history.remove(history.size() - 1);
+
+        if(players[currentPlayer] instanceof PlayerLocal)
+            showHints();
+        else
+            view.postInvalidate();
     }
 
     public int getOptions()
     {
         return options;
-    }
-
-    TouchManager getTouchManager()
-    {
-        return touchManager;
     }
 
     Piece[][] getPieces()
@@ -163,11 +209,6 @@ public class Game extends Thread{
     public static boolean isOptionEnabled(int options, int option)
     {
         return (option & options) != 0;
-    }
-
-    public void setRunning(boolean running)
-    {
-        this.running = running;
     }
 
 }

@@ -14,13 +14,13 @@
 
     <Button
         android:layout_marginRight="30dp"
-        android:text="@string/back"
+        android:text="@string/undo_move"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         android:layout_below="@+id/game_layout"
         android:layout_alignParentEnd="true"
         android:layout_alignParentRight="true"
-        android:onClick="moveBack"/>
+        android:onClick="undoMove"/>
 
 
 </RelativeLayout>

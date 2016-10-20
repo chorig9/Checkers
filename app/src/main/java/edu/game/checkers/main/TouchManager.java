@@ -23,29 +23,15 @@ public class TouchManager implements View.OnTouchListener{
         if(user == null)
             return false;
 
-        BoardView boardView;
+        int tileSize = view.getWidth() / 8;
 
-        try
-        {
-            boardView = (BoardView) view;
+        int x = ((int) motionEvent.getX()) / tileSize;
+        int y = ((int) motionEvent.getY()) / tileSize;
 
-            int tileSize = view.getWidth() / 8;
+        if(x < 0 || x >= 8 || y < 0 || y >= 8) return false;
 
-            int x = ((int) motionEvent.getX()) / tileSize;
-            int y = ((int) motionEvent.getY()) / tileSize;
+        user.clicked(new Position(x, y));
 
-            if(x < 0 || x >= 8 || y < 0 || y >= 8)
-                return false;
-
-            ArrayList<Position> hints = user.clicked(new Position(x, y));
-            boardView.setHints(hints);
-            boardView.postInvalidate();
-
-            return true;
-        }
-        catch(ClassCastException e)
-        {
-            return false;
-        }
+        return true;
     }
 }

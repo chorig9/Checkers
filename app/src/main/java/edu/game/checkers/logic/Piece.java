@@ -46,7 +46,7 @@ public abstract class Piece{
         return (isMoveCapturing(target, options, pieces)
                 && (!optimalCapture || optimalMoveCaptures(options, pieces)
                     == thisMoveCaptures(target, options, pieces)))
-                || (!canJump(options, pieces)
+                || (!canCapture(options, pieces)
                 && isMoveCorrect(target, options, pieces));
     }
 
@@ -119,7 +119,7 @@ public abstract class Piece{
         return positions;
     }
 
-    public Position getCapturedPiecePosition(Position position, Piece[][] pieces)
+    private Position getCapturedPiecePosition(Position position, Piece[][] pieces)
     {
         Position capturedPiecePosition = null;
 
@@ -140,10 +140,11 @@ public abstract class Piece{
     // checks if move is correct and capturing
     public abstract boolean isMoveCapturing(Position target, int options, Piece pieces[][]);
 
-    // checks if move is correct but not captures anything
+    // checks if move is correct and not captures anything
     public abstract boolean isMoveCorrect(Position target, int options, Piece pieces[][]);
 
-    public abstract boolean canJump(int options, Piece pieces[][]);
+    // checks if piece can capture
+    public abstract boolean canCapture(int options, Piece pieces[][]);
 
     public abstract Piece copy();
 }

@@ -48,7 +48,7 @@ public class GameActivity extends AppCompatActivity {
         game.start();
     }
 
-    public void moveBack(View view) {
-        game.moveBack();
+    public void undoMove(View view) {
+        game.undoMove();
     }
 }

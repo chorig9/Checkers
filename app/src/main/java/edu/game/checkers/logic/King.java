@@ -14,7 +14,7 @@ public class King extends Piece{
     @Override
     public void draw(Canvas canvas) {
         Paint paint = new Paint();
-        paint.setColor(owner.getColor());
+        paint.setColor(owner.color);
 
         int tileSize = canvas.getWidth() / 8;
 
@@ -24,12 +24,12 @@ public class King extends Piece{
 
         float width = (float)(0.1 * radius);
         canvas.drawCircle(cx, cy, radius, paint);
-        if(owner.getColor() == Color.WHITE)
+        if(owner.color == Color.WHITE)
             paint.setColor(Color.BLACK);
         else
             paint.setColor(Color.WHITE);
         canvas.drawCircle(cx, cy, radius / 2, paint);
-        paint.setColor(owner.getColor());
+        paint.setColor(owner.color);
         canvas.drawCircle(cx, cy, radius / 2 - width, paint);
     }
 
@@ -71,7 +71,7 @@ public class King extends Piece{
     }
 
     @Override
-    public boolean canJump(int options, Piece[][] pieces) {
+    public boolean canCapture(int options, Piece[][] pieces) {
         int range;
 
         if(!Game.isOptionEnabled(options, Game.flyingKing))

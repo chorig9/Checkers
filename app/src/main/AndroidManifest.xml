@@ -23,6 +23,9 @@
 
         <activity android:name=".main.SelectTypeActivity" android:screenOrientation="portrait" />
 
+        <activity android:name=".main.SelectTypeActivity$NetworkActivity"
+            android:screenOrientation="portrait" />
+
     </application>
 
 </manifest>

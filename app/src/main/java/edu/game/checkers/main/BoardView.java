@@ -80,12 +80,9 @@ public class BoardView extends View {
         Paint paint = new Paint();
         int tileSize = canvas.getWidth() / 8;
 
-        for(Position hint : hints){
-            if(pieces[hint.x][hint.y] == null)
-                paint.setColor(Color.GREEN);
-            else
-                paint.setColor(Color.RED);
+        paint.setColor(Color.GREEN);
 
+        for(Position hint : hints){
             canvas.drawRect(hint.x * tileSize, hint.y * tileSize,
                     (hint.x+1) * tileSize, (hint.y+1) * tileSize, paint);
         }

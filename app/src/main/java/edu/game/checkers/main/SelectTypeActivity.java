@@ -35,7 +35,7 @@ public class SelectTypeActivity extends AppCompatActivity {
         switch(view.getId())
         {
             case R.id.local:
-                // tags of buttons must be the same as class names of players (PlayerLocal, PlayerNetwork)
+                // TODO tags of buttons must be the same as class names of players (PlayerLocal, PlayerNetwork)
                 gameIntent.putExtra("type", view.getTag().toString());
                 startActivity(gameIntent);
                 break;
