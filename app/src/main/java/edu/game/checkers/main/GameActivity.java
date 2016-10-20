@@ -2,13 +2,18 @@ package edu.game.checkers.main;
 
 import android.os.Bundle;
 import android.support.v7.app.AppCompatActivity;
+import android.view.View;
 import android.view.WindowManager;
+import android.widget.LinearLayout;
 
+import edu.game.checkers.R;
 import edu.game.checkers.logic.Game;
 import edu.game.checkers.logic.Player;
 import edu.game.checkers.logic.PlayerLocal;
 
 public class GameActivity extends AppCompatActivity {
+
+    private Game game;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -16,6 +21,8 @@ public class GameActivity extends AppCompatActivity {
         //Remove notification bar
         this.getWindow().setFlags(WindowManager.LayoutParams.FLAG_FULLSCREEN,
                 WindowManager.LayoutParams.FLAG_FULLSCREEN);
+
+        setContentView(R.layout.activity_game);
 
         Bundle bundle = getIntent().getExtras();
         int options = bundle.getInt("options");
@@ -33,10 +40,15 @@ public class GameActivity extends AppCompatActivity {
             return;
         }
 
+        LinearLayout surface = (LinearLayout) findViewById(R.id.game_layout);
         BoardView boardView = new BoardView(this);
+        surface.addView(boardView);
 
-        Game game = new Game(boardView, PlayerLocal.class, playerType, options);
+        game = new Game(boardView, PlayerLocal.class, playerType, options);
         game.start();
-        setContentView(boardView);
+    }
+
+    public void moveBack(View view) {
+        game.moveBack();
     }
 }

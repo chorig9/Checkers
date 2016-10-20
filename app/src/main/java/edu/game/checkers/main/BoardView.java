@@ -5,12 +5,14 @@ import android.graphics.Canvas;
 import android.graphics.Color;
 import android.graphics.Paint;
 import android.view.View;
+import android.view.ViewGroup;
+
 import java.util.List;
 
 import edu.game.checkers.logic.Piece;
 import edu.game.checkers.logic.Position;
 
-public class BoardView extends View{
+public class BoardView extends View {
 
     private List<Position> hints;
     private Piece[][] pieces;
@@ -87,6 +89,13 @@ public class BoardView extends View{
             canvas.drawRect(hint.x * tileSize, hint.y * tileSize,
                     (hint.x+1) * tileSize, (hint.y+1) * tileSize, paint);
         }
+    }
+
+    @Override
+    public void onMeasure(int widthSpec, int heightSpec)
+    {
+        super.onMeasure(widthSpec, heightSpec);
+        setMeasuredDimension(getMeasuredWidth(), getMeasuredWidth()); // square
     }
 
 }

@@ -75,14 +75,12 @@ public class Men extends  Piece{
 
     // additionally converts men to king
     @Override
-    public Position moveTo(Position position, Piece pieces[][])
+    public void moveTo(Position position, Piece pieces[][])
     {
-        Position pos = super.moveTo(position, pieces);
+        super.moveTo(position, pieces);
 
         if((orientation == 1 && position.y == 7) || (orientation == - 1 && position.y == 0))
             pieces[position.x][position.y] = new King(position, owner);
-
-        return pos;
     }
 
     @Override

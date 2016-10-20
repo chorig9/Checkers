@@ -15,6 +15,7 @@ public class Game extends Thread{
                             optimalCapture = 4;
 
     private Player[] players = new Player[2];
+    private int currentPlayer;
     private Piece[][] pieces = new Piece[8][8];
     private BoardView view;
     private int options;
@@ -80,8 +81,7 @@ public class Game extends Thread{
                     Position source = move.first, target = move.second;
                     piece = pieces[source.x][source.y];
 
-                    // TODO - clone is not working
-                    history.add(pieces.clone());
+                    saveState();
 
                     captured = piece.isMoveCapturing(target, options, pieces);
                     piece.moveTo(target, pieces);
@@ -98,6 +98,46 @@ public class Game extends Thread{
     {
         //TODO
         return false;
+    }
+
+    private void saveState()
+    {
+        Piece[][] copyPieces = new Piece[8][8];
+
+        for(int i = 0; i < 8; i++)
+        {
+            for(int j = 0; j < 8; j++)
+            {
+                if(pieces[i][j] == null)
+                    copyPieces[i][j] = null;
+                else
+                    copyPieces[i][j] = pieces[i][j].copy();
+            }
+        }
+
+        history.add(copyPieces);
+    }
+
+    public void moveBack()
+    {
+        if(history.size() == 0)
+            return;
+
+        Piece[][] previousState = history.get(history.size() - 1);
+        history.remove(previousState);
+
+        for(int i = 0; i < 8; i++)
+        {
+            for(int j = 0; j < 8; j++)
+            {
+                if(previousState[i][j] == null)
+                    pieces[i][j] = null;
+                else
+                    pieces[i][j] = previousState[i][j];
+            }
+        }
+
+        view.postInvalidate();
     }
 
     public int getOptions()
