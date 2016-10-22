@@ -1,4 +1,8 @@
-package edu.game.checkers.main;
+package edu.game.checkers.logic;
+
+import android.util.Pair;
+
+import edu.game.checkers.logic.Position;
 
 public class Message {
 
@@ -11,14 +15,14 @@ public class Message {
             NO = "no",       // client response e.g. for invite
             OK = "ok",       // same
             EXIT_SERVER = "exit_server", // player disconnects from server
-            EXIT_GAME = "exit_game",     // player disconnects from game
-            GAME_OVER = "game_over",// game has ended (one player won or draw)
-            INVITE = "invite",           // invite player to game
-            GET_PLAYERS = "get_players", // get list of all connetced players
+            EXIT_GAME = "exit_game",     // player disconnects from board
+            GAME_OVER = "game_over",// board has ended (one player won or draw)
+            INVITE = "invite",           // invite player to board
+            GET_PLAYERS = "get_players", // get list of all connected players
             START_GAME = "start",
             NEXT_TURN = "next",
             CHANGE_OPTIONS = "options",
-            MOVE = "move",               // game move
+            MOVE = "move",               // board move, format : TODO
             TIMEOUT = "timeout",
             PING = "ping",
             PONG = "pong";
@@ -37,6 +41,12 @@ public class Message {
     public final static String[] toArray(String message)
     {
         return message.split(SEPARATOR);
+    }
+
+    public final static Pair<Position, Position> parseMove(String msg)
+    {
+        //TODO
+        return new Pair<>(null, null);
     }
 
 }

@@ -8,11 +8,11 @@ public class Men extends  Piece{
 
     private int orientation;
 
-    public Men(Position position, Player owner)
+    public Men(Position position, Board.Player owner)
     {
         super(position, owner);
 
-        if(owner.color == Color.WHITE)
+        if(owner == Board.Player.WHITE)
             orientation = -1;
         else
             orientation = 1;
@@ -21,7 +21,7 @@ public class Men extends  Piece{
     @Override
     public void draw(Canvas canvas) {
         Paint paint = new Paint();
-        paint.setColor(owner.color);
+        paint.setColor(owner == Board.Player.WHITE ? Color.WHITE : Color.BLACK);
 
         int tileSize = canvas.getWidth() / 8;
 
@@ -34,7 +34,7 @@ public class Men extends  Piece{
 
     @Override
     public boolean isMoveCapturing(Position target, int options, Piece[][] pieces) {
-        boolean backwardJumpAllowed = Game.isOptionEnabled(options, Game.backwardCapture);
+        boolean backwardJumpAllowed = Board.isOptionEnabled(options, Board.backwardCapture);
 
         return pieces[target.x][target.y] == null && Math.abs(target.x - position.x) == 2
                 && pieces[(target.x + position.x)/2][(target.y + position.y)/2] != null
@@ -61,7 +61,7 @@ public class Men extends  Piece{
                 return true;
         }
 
-        if(Game.isOptionEnabled(options, Game.backwardCapture))
+        if(Board.isOptionEnabled(options, Board.backwardCapture))
         {
             for(int px = -2; px <= 2; px+=4)
             {

@@ -1,4 +1,4 @@
-package edu.game.checkers.main;
+package edu.game.checkers.activities;
 
 import android.content.SharedPreferences;
 import android.content.SharedPreferences.Editor;
@@ -8,8 +8,8 @@ import android.view.View;
 import android.view.WindowManager;
 import android.widget.CheckBox;
 
-import edu.game.checkers.R;
-import edu.game.checkers.logic.Game;
+import edu.board.checkers.R;
+import edu.game.checkers.logic.Board;
 
 public class OptionsActivity extends AppCompatActivity {
 
@@ -32,9 +32,9 @@ public class OptionsActivity extends AppCompatActivity {
 
         int options = preferences.getInt(OPTIONS_KEY, 0);
 
-        checkboxCapture.setChecked(Game.isOptionEnabled(options, Game.backwardCapture));
-        checkboxFlying.setChecked(Game.isOptionEnabled(options, Game.flyingKing));
-        checkboxOptimal.setChecked(Game.isOptionEnabled(options, Game.optimalCapture));
+        checkboxCapture.setChecked(Board.isOptionEnabled(options, Board.backwardCapture));
+        checkboxFlying.setChecked(Board.isOptionEnabled(options, Board.flyingKing));
+        checkboxOptimal.setChecked(Board.isOptionEnabled(options, Board.optimalCapture));
     }
 
     public void onCheckBoxClick(View view) {
@@ -48,21 +48,21 @@ public class OptionsActivity extends AppCompatActivity {
         {
             case R.id.checkbox_backward:
                 if(checkBox.isChecked())
-                    editor.putInt(OPTIONS_KEY, options | Game.backwardCapture);
+                    editor.putInt(OPTIONS_KEY, options | Board.backwardCapture);
                 else
-                    editor.putInt(OPTIONS_KEY, options & ~Game.backwardCapture);
+                    editor.putInt(OPTIONS_KEY, options & ~Board.backwardCapture);
                 break;
             case R.id.checkbox_flying:
                 if(checkBox.isChecked())
-                    editor.putInt(OPTIONS_KEY, options | Game.flyingKing);
+                    editor.putInt(OPTIONS_KEY, options | Board.flyingKing);
                 else
-                    editor.putInt(OPTIONS_KEY, options & ~Game.flyingKing);
+                    editor.putInt(OPTIONS_KEY, options & ~Board.flyingKing);
                 break;
             case R.id.checkbox_optimal:
                 if(checkBox.isChecked())
-                    editor.putInt(OPTIONS_KEY, options | Game.optimalCapture);
+                    editor.putInt(OPTIONS_KEY, options | Board.optimalCapture);
                 else
-                    editor.putInt(OPTIONS_KEY, options & ~Game.optimalCapture);
+                    editor.putInt(OPTIONS_KEY, options & ~Board.optimalCapture);
                 break;
         }
 

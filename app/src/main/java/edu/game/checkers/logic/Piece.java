@@ -6,9 +6,9 @@ import java.util.ArrayList;
 public abstract class Piece{
 
     Position position;
-    Player owner;
+    Board.Player owner;
 
-    public Piece(Position position, Player owner)
+    public Piece(Position position, Board.Player owner)
     {
         this.position = position;
         this.owner = owner;
@@ -17,7 +17,7 @@ public abstract class Piece{
     public void moveTo(Position position, Piece pieces[][])
     {
         // if this move is capturing this variable holds position of captured piece
-        // isMoveCapturing function wasn't used because it depends on game options
+        // isMoveCapturing function wasn't used because it depends on board options
         // which are unknown in this method
         // otherwise it is null
         Position capturedPiecePosition = getCapturedPiecePosition(position, pieces);
@@ -32,14 +32,14 @@ public abstract class Piece{
             pieces[capturedPiecePosition.x][capturedPiecePosition.y] = null;
     }
 
-    public Player getOwner()
+    public Board.Player getOwner()
     {
         return owner;
     }
 
     public boolean isMoveValid(Position target, int options, Piece pieces[][])
     {
-        boolean optimalCapture = Game.isOptionEnabled(options, Game.optimalCapture);
+        boolean optimalCapture = Board.isOptionEnabled(options, Board.optimalCapture);
 
         // move is good and: (is capturing and optimal)
         // or capturing is not obligatory or piece cannot jump

@@ -6,7 +6,7 @@ import android.graphics.Paint;
 
 public class King extends Piece{
 
-    public King(Position position, Player owner)
+    public King(Position position, Board.Player owner)
     {
         super(position, owner);
     }
@@ -14,7 +14,7 @@ public class King extends Piece{
     @Override
     public void draw(Canvas canvas) {
         Paint paint = new Paint();
-        paint.setColor(owner.color);
+        paint.setColor(owner == Board.Player.WHITE ? Color.WHITE : Color.BLACK);
 
         int tileSize = canvas.getWidth() / 8;
 
@@ -24,18 +24,15 @@ public class King extends Piece{
 
         float width = (float)(0.1 * radius);
         canvas.drawCircle(cx, cy, radius, paint);
-        if(owner.color == Color.WHITE)
-            paint.setColor(Color.BLACK);
-        else
-            paint.setColor(Color.WHITE);
+        paint.setColor(owner == Board.Player.BLACK ? Color.WHITE : Color.BLACK);
         canvas.drawCircle(cx, cy, radius / 2, paint);
-        paint.setColor(owner.color);
+        paint.setColor(owner == Board.Player.WHITE ? Color.WHITE : Color.BLACK);
         canvas.drawCircle(cx, cy, radius / 2 - width, paint);
     }
 
     @Override
     public boolean isMoveCapturing(Position target, int options, Piece[][] pieces) {
-        if(!Game.isOptionEnabled(options, Game.flyingKing))
+        if(!Board.isOptionEnabled(options, Board.flyingKing))
         {
             return pieces[target.x][target.y] == null
                 && Math.abs(target.x - position.x) == 2 && Math.abs(target.y - position.y) == 2
@@ -51,7 +48,7 @@ public class King extends Piece{
 
     @Override
     public boolean isMoveCorrect(Position target, int options, Piece[][] pieces) {
-        if(!Game.isOptionEnabled(options, Game.flyingKing))
+        if(!Board.isOptionEnabled(options, Board.flyingKing))
         {
             return pieces[target.x][target.y] == null
                 && Math.abs(target.x - position.x) == 1 && Math.abs(target.y - position.y) == 1;
@@ -74,7 +71,7 @@ public class King extends Piece{
     public boolean canCapture(int options, Piece[][] pieces) {
         int range;
 
-        if(!Game.isOptionEnabled(options, Game.flyingKing))
+        if(!Board.isOptionEnabled(options, Board.flyingKing))
             range = 1;
         else
             range = 7;

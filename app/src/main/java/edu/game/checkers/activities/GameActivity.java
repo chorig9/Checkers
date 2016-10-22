@@ -1,4 +1,4 @@
-package edu.game.checkers.main;
+package edu.game.checkers.activities;
 
 import android.os.Bundle;
 import android.support.v7.app.AppCompatActivity;
@@ -6,14 +6,15 @@ import android.view.View;
 import android.view.WindowManager;
 import android.widget.LinearLayout;
 
-import edu.game.checkers.R;
-import edu.game.checkers.logic.Game;
-import edu.game.checkers.logic.Player;
-import edu.game.checkers.logic.PlayerLocal;
+import edu.board.checkers.R;
+import edu.game.checkers.logic.BoardView;
+import edu.game.checkers.logic.Board;
+import edu.game.checkers.logic.GameController;
+import edu.game.checkers.logic.LocalController;
 
 public class GameActivity extends AppCompatActivity {
 
-    private Game game;
+    private Board board;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -26,29 +27,16 @@ public class GameActivity extends AppCompatActivity {
 
         Bundle bundle = getIntent().getExtras();
         int options = bundle.getInt("options");
-        String playerTypeName = bundle.getString("type");
-        Class<? extends Player> playerType;
-
-        try
-        {
-            playerType = (Class<? extends Player>) Class.forName(playerTypeName);
-        }
-        catch(Exception e)
-        {
-            e.printStackTrace();
-            finish();
-            return;
-        }
 
         LinearLayout surface = (LinearLayout) findViewById(R.id.game_layout);
         BoardView boardView = new BoardView(this);
         surface.addView(boardView);
 
-        game = new Game(boardView, PlayerLocal.class, playerType, options);
-        game.start();
+        board = new Board(options);
+        GameController controller = new LocalController(board, boardView);
     }
 
     public void undoMove(View view) {
-        game.undoMove();
+        board.undoMove();
     }
 }

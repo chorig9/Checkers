@@ -1,10 +1,8 @@
 <?xml version="1.0" encoding="utf-8"?>
 <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
-    xmlns:tools="http://schemas.android.com/tools"
     android:orientation="vertical"
     android:layout_width="match_parent"
-    android:layout_height="match_parent"
-    tools:context=".main.SelectTypeActivity">
+    android:layout_height="match_parent">
 
     <TextView
         android:layout_width="match_parent"
@@ -29,8 +27,7 @@
             android:layout_marginBottom="20dp"
             android:layout_marginTop="55dp"
             android:text="@string/local"
-            android:onClick="selectGame"
-            android:tag="edu.game.checkers.logic.PlayerLocal"/>
+            android:onClick="selectGame" />
 
         <Button
             android:id="@+id/network"
@@ -38,16 +35,14 @@
             android:layout_height="60dp"
             android:layout_marginBottom="20dp"
             android:text="@string/network"
-            android:onClick="selectGame"
-            android:tag="edu.game.checkers.logic.PlayerNetwork"/>
+            android:onClick="selectGame" />
 
         <Button
             android:id="@+id/ai"
             android:layout_width="match_parent"
             android:layout_height="60dp"
             android:text="@string/ai"
-            android:onClick="selectGame"
-            android:tag="edu.game.checkers.logic.PlayerAI"/>
+            android:onClick="selectGame" />
 
     </LinearLayout>
 

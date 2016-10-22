@@ -1,16 +1,12 @@
-package edu.game.checkers.main;
+package edu.game.checkers.logic;
 
 import android.content.Context;
 import android.graphics.Canvas;
 import android.graphics.Color;
 import android.graphics.Paint;
 import android.view.View;
-import android.view.ViewGroup;
 
 import java.util.List;
-
-import edu.game.checkers.logic.Piece;
-import edu.game.checkers.logic.Position;
 
 public class BoardView extends View {
 
@@ -32,9 +28,6 @@ public class BoardView extends View {
         super.onDraw(canvas);
 
         drawBoard(canvas);
-
-        if(pieces == null)
-            return;
 
         for (Piece[] pieceRow : pieces)
             for (Piece piece : pieceRow)
