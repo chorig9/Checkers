@@ -18,7 +18,6 @@ public class Board{
     private boolean moved = false; // have player moved any piece in this turn(is it multiple capture)?
     private ArrayList<GameState> history;
 
-
     public Board(int options)
     {
         this.options = options;
@@ -101,11 +100,9 @@ public class Board{
     {
         Piece[][] copyPieces = new Piece[8][8];
 
-        for(int i = 0; i < 8; i++)
-        {
-            for(int j = 0; j < 8; j++)
-            {
-                if(pieces[i][j] == null)
+        for(int i = 0; i < 8; i++) {
+            for (int j = 0; j < 8; j++) {
+                if (pieces[i][j] == null)
                     copyPieces[i][j] = null;
                 else
                     copyPieces[i][j] = pieces[i][j].copy();
@@ -124,9 +121,13 @@ public class Board{
 
         moved = pastState.moved;
         currentPlayer = pastState.currentPlayer;
-        pieces = pastState.pieces.clone(); //copying references (simple assignment would break view)
+        pieces = pastState.pieces;
 
-        selectedPiece = pieces[pastState.selectedPiecePosition.x][pastState.selectedPiecePosition.y];
+        // if in the middle of move - keep piece selected
+        if(moved)
+            selectedPiece = pieces[pastState.selectedPiecePosition.x][pastState.selectedPiecePosition.y];
+        else
+            selectedPiece = null;
 
         history.remove(history.size() - 1);
     }

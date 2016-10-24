@@ -5,8 +5,8 @@ import java.util.ArrayList;
 
 public abstract class Piece{
 
-    Position position;
-    Board.Player owner;
+    protected Position position;
+    protected Board.Player owner;
 
     public Piece(Position position, Board.Player owner)
     {
@@ -133,6 +133,11 @@ public abstract class Piece{
         }
 
         return capturedPiecePosition;
+    }
+
+    public Position getPosition()
+    {
+        return position;
     }
 
     public abstract void draw(Canvas canvas);

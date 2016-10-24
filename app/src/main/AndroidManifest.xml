@@ -2,6 +2,8 @@
 <manifest xmlns:android="http://schemas.android.com/apk/res/android"
     package="edu.board.checkers">
 
+    <uses-permission android:name="android.permission.INTERNET" />
+
     <application
         android:allowBackup="true"
         android:icon="@mipmap/ic_launcher"
@@ -9,7 +11,8 @@
         android:supportsRtl="true"
         android:theme="@style/AppTheme">
 
-        <activity android:name="edu.game.checkers.activities.MainActivity" android:screenOrientation="portrait">
+        <activity android:name="edu.game.checkers.activities.MainActivity"
+            android:screenOrientation="portrait">
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
 
@@ -17,13 +20,25 @@
             </intent-filter>
         </activity>
 
-        <activity android:name="edu.game.checkers.activities.OptionsActivity" android:screenOrientation="portrait" />
+        <activity android:name="edu.game.checkers.activities.OptionsActivity"
+            android:screenOrientation="portrait" />
 
-        <activity android:name="edu.game.checkers.activities.GameActivity" android:screenOrientation="portrait" />
+        <activity android:name="edu.game.checkers.activities.GameActivity"
+            android:screenOrientation="portrait" />
 
-        <activity android:name="edu.game.checkers.activities.SelectTypeActivity" android:screenOrientation="portrait" />
+        <activity android:name="edu.game.checkers.activities.SelectTypeActivity"
+            android:screenOrientation="portrait" />
+        
+        <activity android:name="edu.game.checkers.activities.LocalGameActivity"
+            android:screenOrientation="portrait" />
+        
+        <activity android:name="edu.game.checkers.activities.NetworkGameActivity"
+            android:screenOrientation="portrait" />
 
-        <activity android:name="edu.game.checkers.activities.SelectTypeActivity$NetworkActivity"
+        <activity android:name="edu.game.checkers.activities.NetworkGameActivity$EnterNameActivity"
+            android:screenOrientation="portrait" />
+
+        <activity android:name="edu.game.checkers.activities.NetworkGameActivity$PlayersListActivity"
             android:screenOrientation="portrait" />
 
     </application>

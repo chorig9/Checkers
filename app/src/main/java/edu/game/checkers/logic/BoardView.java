@@ -13,9 +13,10 @@ public class BoardView extends View {
     private List<Position> hints;
     private Piece[][] pieces;
 
-    public BoardView(Context context)
+    public BoardView(Context context, Piece[][] pieces)
     {
         super(context);
+        this.pieces = pieces;
     }
 
     public void setPieces(Piece[][] pieces)

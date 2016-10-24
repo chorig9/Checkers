@@ -8,27 +8,29 @@ import java.io.InputStream;
 import java.io.InputStreamReader;
 import java.io.OutputStream;
 import java.io.PrintWriter;
+import java.lang.reflect.Array;
 import java.net.Socket;
+import java.util.Arrays;
+import java.util.List;
 
-public class NetworkManager implements Runnable{
+import edu.game.checkers.activities.GameActivity;
+
+public class NetworkManager{
 
     public final static int PORT = 8189;
     public final static String HOST = "89.40.127.125";
 
     // in ms
-    public final static int SERVER_TIMEOUT = 200;
-    public final static int USER_TIMEOUT = 6000; // TODO - move to board or elsewhere
+    public final static int SERVER_TIMEOUT = 600;
+    public final static int USER_TIMEOUT = 6000;
     public final static int MAX_TIMEOUT = 600000;
 
     private final Socket socket;
     private final BufferedReader in;
     private final PrintWriter out;
 
-    private final GameController gameController;
-
-    public NetworkManager(GameController gameController) throws IOException
+    public NetworkManager() throws IOException
     {
-        this.gameController = gameController;
         socket = new Socket(HOST, PORT);
 
         InputStream inStream = socket.getInputStream();
@@ -43,6 +45,25 @@ public class NetworkManager implements Runnable{
         in.close();
         out.close();
         socket.close();
+    }
+
+    // send request in format "command#parameter" and receive "command#response" - 'symmetric'
+    public List<String> sendRequest(String msg, int timeout) throws IOException
+    {
+        send(msg);
+        String response = receive(timeout);
+        List<String> list = Message.toList(response);
+
+        if(list.get(0).equals(Message.toList(msg).get(0)))
+            return list.subList(1, list.size() - 1);
+        else
+            throw new IOException("wrong response");
+    }
+
+    public void sendMove(Position piece, Position target) throws IOException
+    {
+        send(Message.MOVE + Message.SEPARATOR + piece.toString()
+                + Message.SEPARATOR + target.toString()); // TODO toString in Position
     }
 
     public void send(String msg) throws IOException
@@ -60,26 +81,6 @@ public class NetworkManager implements Runnable{
         if(in.ready())
             return in.readLine();
         else
-            throw new IOException();
-    }
-
-    @Override
-    public void run() {
-        while(true){
-            try {
-                String msg = receive(USER_TIMEOUT);
-
-                switch (msg)
-                {
-                    case Message.MOVE:
-                        Pair<Position, Position> move = Message.parseMove(msg);
-                        gameController.clicked(move.first);
-                        gameController.clicked(move.second);
-                        break;
-                }
-            } catch (IOException e) {
-                e.printStackTrace();
-            }
-        }
+            throw new IOException("timeout");
     }
 }

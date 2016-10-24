@@ -1,6 +1,10 @@
 package edu.game.checkers.logic;
 
+import android.util.ArraySet;
 import android.util.Pair;
+
+import java.util.Arrays;
+import java.util.List;
 
 import edu.game.checkers.logic.Position;
 
@@ -11,6 +15,8 @@ public class Message {
 
     public final static String SEPARATOR = "#";
     public final static String HI = "hi",
+            PLAYER_WHITE = "1",
+            PLAYER_ = "2",
             ERROR = "error", // unexpected or wrong response
             NO = "no",       // client response e.g. for invite
             OK = "ok",       // same
@@ -23,6 +29,7 @@ public class Message {
             NEXT_TURN = "next",
             CHANGE_OPTIONS = "options",
             MOVE = "move",               // board move, format : TODO
+            MOVE_UNDONE = "move_undone",
             TIMEOUT = "timeout",
             PING = "ping",
             PONG = "pong";
@@ -38,9 +45,9 @@ public class Message {
         return msg;
     }
 
-    public final static String[] toArray(String message)
+    public final static List<String> toList(String message)
     {
-        return message.split(SEPARATOR);
+        return Arrays.asList(message.split(SEPARATOR));
     }
 
     public final static Pair<Position, Position> parseMove(String msg)
