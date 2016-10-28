@@ -23,6 +23,12 @@ public final class Position {
         return this.x == position.x && this.y == position.y;
     }
 
+    @Override
+    public String toString()
+    {
+        return Integer.toString(x) + ";" + Integer.toString(y);
+    }
+
     public boolean isInRange()
     {
         return x >= 0 && x < 8 && y >= 0 && y < 8;

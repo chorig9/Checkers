@@ -35,11 +35,10 @@
         <activity android:name="edu.game.checkers.activities.NetworkGameActivity"
             android:screenOrientation="portrait" />
 
-        <activity android:name="edu.game.checkers.activities.NetworkGameActivity$EnterNameActivity"
+        <activity android:name="edu.game.checkers.activities.NetworkActivity"
             android:screenOrientation="portrait" />
 
-        <activity android:name="edu.game.checkers.activities.NetworkGameActivity$PlayersListActivity"
-            android:screenOrientation="portrait" />
+        <service android:name="edu.game.checkers.activities.NetworkService" />
 
     </application>
 

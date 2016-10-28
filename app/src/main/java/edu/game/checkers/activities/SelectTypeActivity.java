@@ -21,15 +21,15 @@ public class SelectTypeActivity extends AppCompatActivity {
     }
 
     public void selectGame(View view) {
-        Intent gameIntent;
+        Intent intent;
 
         switch(view.getId())
         {
             case R.id.local:
-                gameIntent = new Intent(this, LocalGameActivity.class);
+                intent = new Intent(this, LocalGameActivity.class);
                 break;
             case R.id.network:
-                gameIntent = new Intent(this, NetworkGameActivity.class);
+                intent = new Intent(this, NetworkActivity.class);
                 break;
             default:
                 return;
@@ -38,7 +38,7 @@ public class SelectTypeActivity extends AppCompatActivity {
         Bundle bundle = getIntent().getExtras();
         int options = bundle.getInt("options");
 
-        gameIntent.putExtra("options", options);
-        startActivity(gameIntent);
+        intent.putExtra("options", options);
+        startActivity(intent);
     }
 }
