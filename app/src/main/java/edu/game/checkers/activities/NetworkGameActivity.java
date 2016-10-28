@@ -1,17 +1,10 @@
 package edu.game.checkers.activities;
 
-import android.content.ComponentName;
-import android.content.Context;
-import android.content.Intent;
-import android.content.ServiceConnection;
 import android.os.Bundle;
-import android.os.IBinder;
 import android.view.View;
 
-import java.io.IOException;
-
 import edu.game.checkers.logic.Board;
-import edu.game.checkers.logic.Message;
+import edu.game.checkers.logic.NetworkMessage;
 import edu.game.checkers.logic.Position;
 
 public class NetworkGameActivity extends GameActivity{
@@ -60,7 +53,7 @@ public class NetworkGameActivity extends GameActivity{
     {
         super.undoMove(view);
             //TODO - is bounded?
-        networkService.send(Message.MOVE_UNDONE);
+        networkService.send(NetworkMessage.MOVE_UNDONE);
     }
 
 }

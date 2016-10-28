@@ -6,6 +6,7 @@ import android.content.Intent;
 import android.content.ServiceConnection;
 import android.content.SharedPreferences;
 import android.os.Bundle;
+import android.os.Handler;
 import android.os.IBinder;
 import android.support.v7.app.AppCompatActivity;
 import android.view.View;
@@ -18,7 +19,7 @@ import java.util.ArrayList;
 import java.util.List;
 
 import edu.board.checkers.R;
-import edu.game.checkers.logic.Message;
+import edu.game.checkers.logic.NetworkMessage;
 
 public class NetworkActivity extends AppCompatActivity {
 
@@ -26,6 +27,7 @@ public class NetworkActivity extends AppCompatActivity {
 
     private NetworkService networkService;
     private boolean bound = false;
+    private AlertDialog alertDialog = new AlertDialog(this);
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -66,8 +68,8 @@ public class NetworkActivity extends AppCompatActivity {
             networkService = binder.getService();
             bound = true;
 
-            //if(!networkService.isConnected())
-            //    new AlertDialog(NetworkActivity.this).createErrorDialog("Connection error");
+            if(!networkService.isConnected())
+                networkService.connectToServer(new AbstractServiceResponseHandler());
         }
 
         @Override
@@ -101,20 +103,15 @@ public class NetworkActivity extends AppCompatActivity {
         Bundle bundle = getIntent().getExtras();
         int options = bundle.getInt("options");
 
-        networkService.makeRequest(Message.HI + Message.SEPARATOR + name
-                + Message.SEPARATOR + Integer.toString(options),
-                new ServiceResponseHandler() {
+        networkService.makeRequest(NetworkMessage.HI + NetworkMessage.SEPARATOR + name
+                + NetworkMessage.SEPARATOR + Integer.toString(options),
+                new AbstractServiceResponseHandler() {
             @Override
-            public void onConnectionError(String error) {
-                new AlertDialog(NetworkActivity.this).createErrorDialog(error);
-            }
-
-            @Override
-            public void onServerResponse(String response) {
-                if(response.equals(Message.OK))
+            public void onServerResponse(final String response) {
+                if(response.equals(NetworkMessage.OK))
                     displayPlayersList();
                 else
-                    new AlertDialog(NetworkActivity.this).createInfoDialog(response);
+                    alertDialog.createInfoDialog(response);
             }
         });
     }
@@ -125,29 +122,37 @@ public class NetworkActivity extends AppCompatActivity {
 
         final ArrayList<String> list = new ArrayList<>();
         final ArrayAdapter<String> adapter;
-        ListView listView;
+        final ListView listView;
 
         listView = (ListView) findViewById(R.id.players_list);
         adapter = new ArrayAdapter<>(this, R.layout.player_list_element, list);
 
         listView.setAdapter(adapter);
 
-        networkService.makeRequest(Message.GET_PLAYERS, new ServiceResponseHandler() {
-            @Override
-            public void onConnectionError(String error) {
-                new AlertDialog(NetworkActivity.this).createErrorDialog(error);
-            }
-
+        networkService.makeRequest(NetworkMessage.GET_PLAYERS, new AbstractServiceResponseHandler() {
             @Override
             public void onServerResponse(String response) {
-                List<String> respList = Message.toList(response);
+                final List<String> respList = NetworkMessage.toList(response);
 
-                if(respList.get(0).equals(Message.GET_PLAYERS)){
+                if(respList.get(0).equals(NetworkMessage.GET_PLAYERS)){
                     list.clear();
                     list.addAll(respList.subList(1, respList.size() - 1));
                     adapter.notifyDataSetChanged();
                 }
             }
         });
+    }
+
+    private class AbstractServiceResponseHandler implements ServiceResponseHandler{
+
+        @Override
+        public void onConnectionError(String error) {
+            alertDialog.createErrorDialog(error);
+        }
+
+        @Override
+        public void onServerResponse(String response) {
+            // Empty for cases when server response is not needed (initializing connection)
+        }
     }
 }

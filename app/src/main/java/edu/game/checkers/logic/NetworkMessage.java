@@ -8,9 +8,9 @@ import java.util.List;
 
 import edu.game.checkers.logic.Position;
 
-public class Message {
+public class NetworkMessage {
 
-    //Message should contain one of following string and possibly
+    //NetworkMessage should contain one of following string and possibly
     //some arguments after separator (separator before each argument)
 
     public final static String SEPARATOR = "#";

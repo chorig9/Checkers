@@ -2,6 +2,7 @@ package edu.game.checkers.activities;
 
 import android.app.Service;
 import android.content.Intent;
+import android.os.AsyncTask;
 import android.os.Binder;
 import android.os.IBinder;
 
@@ -13,7 +14,7 @@ import java.io.OutputStream;
 import java.io.PrintWriter;
 import java.net.Socket;
 
-import edu.game.checkers.logic.Message;
+import edu.game.checkers.logic.NetworkMessage;
 import edu.game.checkers.logic.Position;
 
 
@@ -29,48 +30,32 @@ public class NetworkService extends Service {
     private final static int USER_TIMEOUT = 6000;
     private final static int MAX_TIMEOUT = 600000;
 
-    private Socket socket;
     private BufferedReader in;
     private PrintWriter out;
 
     private boolean connected = false;
 
+    public void connectToServer(ServiceResponseHandler callback)
+    {
+        new ConnectToServerTask(callback).execute();
+    }
+
     public void makeRequest(final String msg, final ServiceResponseHandler callback)
     {
-        new Thread(new Runnable() {
-            @Override
-            public void run() {
-                try{
-                    // send request
-                    send(msg);
-
-                    // wait for response
-                    long startTime = System.currentTimeMillis();
-                    while(System.currentTimeMillis() - startTime < SERVER_TIMEOUT
-                            && !in.ready()){
-                    }
-
-                    if(in.ready())
-                        callback.onServerResponse(in.readLine());
-                    else // exception if no response
-                        callback.onConnectionError("Timeout");
-                }
-                catch(IOException e){
-                    callback.onConnectionError(e.getMessage());
-                }
-            }
-        });
+        new MakeRequestTask(callback).execute(msg);
     }
 
     public void sendMove(final Position position, final Position target)
     {
-        new Thread(new Runnable() {
+        Thread thread = new Thread(new Runnable() {
             @Override
             public void run() {
-                send(Message.MOVE + Message.SEPARATOR + position.toString()
-                        + Message.SEPARATOR + target.toString());
+                send(NetworkMessage.MOVE + NetworkMessage.SEPARATOR + position.toString()
+                        + NetworkMessage.SEPARATOR + target.toString());
             }
         });
+
+        thread.start();
     }
 
     public void startGame(ServiceResponseHandler callback)
@@ -86,29 +71,6 @@ public class NetworkService extends Service {
     public boolean isConnected()
     {
         return connected;
-    }
-
-    @Override
-    public void onCreate() {
-        new Thread(new Runnable() {
-            @Override
-            public void run() {
-                try{
-                    socket = new Socket(HOST, PORT);
-
-                    InputStream inStream = socket.getInputStream();
-                    OutputStream outStream = socket.getOutputStream();
-
-                    in = new BufferedReader(new InputStreamReader(inStream));
-                    out = new PrintWriter(outStream, true);
-
-                    connected = true;
-                }
-                catch(IOException e){
-                    connected = false;
-                }
-            }
-        });
     }
 
     @Override
@@ -131,6 +93,85 @@ public class NetworkService extends Service {
         NetworkService getService() {
             // Return this instance of NetworkService so clients can call public methods
             return NetworkService.this;
+        }
+    }
+
+    private class MakeRequestTask extends AsyncTask<String, Void, Void>{
+
+        ServiceResponseHandler callback;
+        String response = null;
+        Exception exception = null;
+
+        public MakeRequestTask(ServiceResponseHandler callback){
+            this.callback = callback;
+        }
+
+        @Override
+        protected Void doInBackground(String... msg) {
+            try{
+                // send request
+                send(msg[0]);
+
+                // wait for response
+                long startTime = System.currentTimeMillis();
+                while(System.currentTimeMillis() - startTime < SERVER_TIMEOUT
+                        && !in.ready()){
+                }
+
+                if(in.ready())
+                    response = in.readLine();
+                else // exception if no response
+                    throw new IOException("Timeout");
+            }
+            catch(IOException e){
+                exception = e;
+            }
+
+            return null;
+        }
+
+        @Override
+        protected void onPostExecute(Void aVoid) {
+            if(response != null)
+                callback.onServerResponse(response);
+            else
+                callback.onConnectionError(exception.getMessage());
+        }
+    }
+
+    private class ConnectToServerTask extends AsyncTask<Void, Void, Void> {
+
+        ServiceResponseHandler callback;
+        Exception exception = null;
+
+        public ConnectToServerTask(ServiceResponseHandler callback){
+            this.callback = callback;
+        }
+
+        @Override
+        protected Void doInBackground(Void... params) {
+            try{
+                Socket socket = new Socket(HOST, PORT);
+
+                InputStream inStream = socket.getInputStream();
+                OutputStream outStream = socket.getOutputStream();
+
+                in = new BufferedReader(new InputStreamReader(inStream));
+                out = new PrintWriter(outStream, true);
+            }
+            catch(IOException e){
+                exception = e;
+            }
+
+            return null;
+        }
+
+        @Override
+        protected void onPostExecute(Void aVoid) {
+            if(exception != null)
+                callback.onConnectionError(exception.getMessage());
+            else
+                connected = true;
         }
     }
 }
