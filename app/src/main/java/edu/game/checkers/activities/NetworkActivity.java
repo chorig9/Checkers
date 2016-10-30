@@ -7,6 +7,7 @@ import android.content.Intent;
 import android.content.ServiceConnection;
 import android.content.SharedPreferences;
 import android.os.Bundle;
+import android.os.Handler;
 import android.os.IBinder;
 import android.support.v7.app.AppCompatActivity;
 import android.view.View;
@@ -26,7 +27,8 @@ public class NetworkActivity extends AppCompatActivity {
 
     private NetworkService networkService;
     private boolean bound = false;
-    private AlertDialog alertDialog = new AlertDialog(this);
+
+    Handler handler = new Handler();
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -67,33 +69,34 @@ public class NetworkActivity extends AppCompatActivity {
             networkService = binder.getService();
             bound = true;
 
-            networkService.connectToServer(new BasicServiceResponseHandler());
-            networkService.startListeningThread(new ServiceRequestHandler() {
-                @Override
-                public void onInvite(final String name) {
-                    alertDialog.createQuestionDialog(name + "invited you, accept?",
-                            new DialogInterface.OnClickListener() {
-                                @Override
-                                public void onClick(DialogInterface dialog, int which) {
-                                    networkService.sendMessage(new Message(Message.OK));
-                                    startGame(name);
-                                    dialog.dismiss();
-                                }
-                            },
-                            new DialogInterface.OnClickListener() {
-                                @Override
-                                public void onClick(DialogInterface dialog, int which) {
-                                    networkService.sendMessage(new Message(Message.NO));
-                                    dialog.dismiss();
-                                }
-                            });
-                }
+            networkService.connectToServer(new BasicServiceResponseHandler(),
+                    new ServiceRequestHandler() {
+                        @Override
+                        public void onInvite(final String name) {
+                            new AlertDialog(NetworkActivity.this).createQuestionDialog(name
+                                            + "invited you, accept?",
+                                    new DialogInterface.OnClickListener() {
+                                        @Override
+                                        public void onClick(DialogInterface dialog, int which) {
+                                            networkService.sendMessage(new Message(Message.OK));
+                                            startGame(name);
+                                            dialog.dismiss();
+                                        }
+                                    },
+                                    new DialogInterface.OnClickListener() {
+                                        @Override
+                                        public void onClick(DialogInterface dialog, int which) {
+                                            networkService.sendMessage(new Message(Message.NO));
+                                            dialog.dismiss();
+                                        }
+                                    });
+                        }
 
-                @Override
-                public void onConnectionError(String error) {
-                    alertDialog.createErrorDialog(error);
-                }
-            });
+                        @Override
+                        public void onConnectionError(String error) {
+                            new AlertDialog(NetworkActivity.this).createErrorDialog(error);
+                        }
+                    });
         }
 
         @Override
@@ -134,7 +137,7 @@ public class NetworkActivity extends AppCompatActivity {
                 if(response.getCode().equals(Message.OK))
                     displayPlayersList();
                 else
-                    alertDialog.createInfoDialog(response.getArguments().get(0));
+                    new AlertDialog(NetworkActivity.this).createInfoDialog(response.getArguments().get(0));
             }
         });
     }
@@ -177,10 +180,10 @@ public class NetworkActivity extends AppCompatActivity {
                     startGame(name);
                 }
                 else if(response.getCode().equals(Message.NO)){
-                    alertDialog.createInfoDialog("Player didn't accept your invite");
+                    new AlertDialog(NetworkActivity.this).createInfoDialog("Player didn't accept your invite");
                 }
                 else{
-                    alertDialog.createInfoDialog(response.getArguments().get(0));
+                    new AlertDialog(NetworkActivity.this).createInfoDialog(response.getArguments().get(0));
                 }
             }
         });
@@ -196,7 +199,7 @@ public class NetworkActivity extends AppCompatActivity {
 
         @Override
         public void onConnectionError(String error) {
-            alertDialog.createErrorDialog(error);
+            new AlertDialog(NetworkActivity.this).createErrorDialog(error);
         }
 
         @Override
