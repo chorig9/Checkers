@@ -13,9 +13,8 @@ import java.io.InputStreamReader;
 import java.io.OutputStream;
 import java.io.PrintWriter;
 import java.net.Socket;
-
-import edu.game.checkers.logic.NetworkMessage;
-import edu.game.checkers.logic.Position;
+import java.util.PriorityQueue;
+import java.util.Queue;
 
 
 public class NetworkService extends Service {
@@ -28,44 +27,72 @@ public class NetworkService extends Service {
     // in ms
     private final static int SERVER_TIMEOUT = 600;
     private final static int USER_TIMEOUT = 6000;
-    private final static int MAX_TIMEOUT = 600000;
+    private final static int CONNECTION_TIMEOUT = 6000;
 
     private BufferedReader in;
     private PrintWriter out;
 
-    private boolean connected = false;
+    private volatile boolean connected = false;
+    private Queue<AsyncTask<Void, Void, Void>> requests = new PriorityQueue<>();
+
+    private volatile boolean inGame = false;
+    private GameController gameController;
 
     public void connectToServer(ServiceResponseHandler callback)
     {
         new ConnectToServerTask(callback).execute();
     }
 
-    public void makeRequest(final String msg, final ServiceResponseHandler callback)
-    {
-        new MakeRequestTask(callback).execute(msg);
-    }
-
-    public void sendMove(final Position position, final Position target)
+    public void startListeningThread(final ServiceRequestHandler callback)
     {
         Thread thread = new Thread(new Runnable() {
             @Override
             public void run() {
-                send(NetworkMessage.MOVE + NetworkMessage.SEPARATOR + position.toString()
-                        + NetworkMessage.SEPARATOR + target.toString());
+                while(connected){
+                    try{
+                        if(in.ready()){
+                            Message msg = new Message(in.readLine());
+
+                            switch (msg.getCode()){
+                                case Message.INVITE:
+                                    callback.onInvite(msg.getArguments().get(0));
+                                    break;
+                                default:
+                                    if(inGame)
+                                        gameController.onMessage(msg);
+                                    break;
+                            }
+                        }
+                        else if(!requests.isEmpty()){
+                            requests.poll().execute();
+                        }
+                    }
+                    catch (IOException e){
+                        callback.onConnectionError(e.getMessage());
+                        connected = false;
+                        return;
+                    }
+                }
             }
         });
 
         thread.start();
     }
 
-    public void startGame(ServiceResponseHandler callback)
+    public void makeRequest(final Message msg, final ServiceResponseHandler callback)
     {
-
+        requests.add(new MakeRequestTask(callback, msg));
     }
 
-    public void send(String msg)
+    public void sendMessage(final Message msg)
     {
-        out.println(msg);
+        requests.add(new SendMessageTask(msg));
+    }
+
+    public void startGame(GameController controller)
+    {
+        this.gameController = controller;
+        inGame = true;
     }
 
     public boolean isConnected()
@@ -75,6 +102,7 @@ public class NetworkService extends Service {
 
     @Override
     public void onDestroy() {
+        connected = false;
         try {
             if(in != null)
                 in.close();
@@ -96,21 +124,23 @@ public class NetworkService extends Service {
         }
     }
 
-    private class MakeRequestTask extends AsyncTask<String, Void, Void>{
+    private class MakeRequestTask extends AsyncTask<Void, Void, Void>{
 
         ServiceResponseHandler callback;
-        String response = null;
+        Message response = null;
         Exception exception = null;
+        Message msg;
 
-        public MakeRequestTask(ServiceResponseHandler callback){
+        public MakeRequestTask(ServiceResponseHandler callback, Message msg){
             this.callback = callback;
+            this.msg = msg;
         }
 
         @Override
-        protected Void doInBackground(String... msg) {
+        protected Void doInBackground(Void... msg) {
             try{
                 // send request
-                send(msg[0]);
+                out.println(msg.toString());
 
                 // wait for response
                 long startTime = System.currentTimeMillis();
@@ -119,7 +149,7 @@ public class NetworkService extends Service {
                 }
 
                 if(in.ready())
-                    response = in.readLine();
+                    response = new Message(in.readLine());
                 else // exception if no response
                     throw new IOException("Timeout");
             }
@@ -136,6 +166,21 @@ public class NetworkService extends Service {
                 callback.onServerResponse(response);
             else
                 callback.onConnectionError(exception.getMessage());
+        }
+    }
+
+    private class SendMessageTask extends AsyncTask<Void, Void, Void>
+    {
+        Message msg;
+
+        public SendMessageTask(Message msg){
+            this.msg = msg;
+        }
+
+        @Override
+        protected Void doInBackground(Void... params) {
+            out.println(msg.toString());
+            return null;
         }
     }
 

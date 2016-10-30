@@ -2,6 +2,7 @@ package edu.game.checkers.logic;
 
 public final class Position {
     public int x, y;
+    public final static String SEPARATOR = ";";
 
     public Position(int x, int y){
         this.x = x; this.y = y;
@@ -26,7 +27,7 @@ public final class Position {
     @Override
     public String toString()
     {
-        return Integer.toString(x) + ";" + Integer.toString(y);
+        return Integer.toString(x) + SEPARATOR + Integer.toString(y);
     }
 
     public boolean isInRange()

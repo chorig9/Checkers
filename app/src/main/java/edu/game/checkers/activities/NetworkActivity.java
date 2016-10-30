@@ -2,11 +2,11 @@ package edu.game.checkers.activities;
 
 import android.content.ComponentName;
 import android.content.Context;
+import android.content.DialogInterface;
 import android.content.Intent;
 import android.content.ServiceConnection;
 import android.content.SharedPreferences;
 import android.os.Bundle;
-import android.os.Handler;
 import android.os.IBinder;
 import android.support.v7.app.AppCompatActivity;
 import android.view.View;
@@ -14,12 +14,11 @@ import android.view.WindowManager;
 import android.widget.ArrayAdapter;
 import android.widget.EditText;
 import android.widget.ListView;
+import android.widget.TextView;
 
 import java.util.ArrayList;
-import java.util.List;
 
 import edu.board.checkers.R;
-import edu.game.checkers.logic.NetworkMessage;
 
 public class NetworkActivity extends AppCompatActivity {
 
@@ -68,8 +67,33 @@ public class NetworkActivity extends AppCompatActivity {
             networkService = binder.getService();
             bound = true;
 
-            if(!networkService.isConnected())
-                networkService.connectToServer(new AbstractServiceResponseHandler());
+            networkService.connectToServer(new BasicServiceResponseHandler());
+            networkService.startListeningThread(new ServiceRequestHandler() {
+                @Override
+                public void onInvite(final String name) {
+                    alertDialog.createQuestionDialog(name + "invited you, accept?",
+                            new DialogInterface.OnClickListener() {
+                                @Override
+                                public void onClick(DialogInterface dialog, int which) {
+                                    networkService.sendMessage(new Message(Message.OK));
+                                    startGame(name);
+                                    dialog.dismiss();
+                                }
+                            },
+                            new DialogInterface.OnClickListener() {
+                                @Override
+                                public void onClick(DialogInterface dialog, int which) {
+                                    networkService.sendMessage(new Message(Message.NO));
+                                    dialog.dismiss();
+                                }
+                            });
+                }
+
+                @Override
+                public void onConnectionError(String error) {
+                    alertDialog.createErrorDialog(error);
+                }
+            });
         }
 
         @Override
@@ -103,15 +127,14 @@ public class NetworkActivity extends AppCompatActivity {
         Bundle bundle = getIntent().getExtras();
         int options = bundle.getInt("options");
 
-        networkService.makeRequest(NetworkMessage.HI + NetworkMessage.SEPARATOR + name
-                + NetworkMessage.SEPARATOR + Integer.toString(options),
-                new AbstractServiceResponseHandler() {
+        networkService.makeRequest(new Message(Message.HI, name, Integer.toString(options)),
+                new BasicServiceResponseHandler() {
             @Override
-            public void onServerResponse(final String response) {
-                if(response.equals(NetworkMessage.OK))
+            public void onServerResponse(final Message response) {
+                if(response.getCode().equals(Message.OK))
                     displayPlayersList();
                 else
-                    alertDialog.createInfoDialog(response);
+                    alertDialog.createInfoDialog(response.getArguments().get(0));
             }
         });
     }
@@ -129,21 +152,47 @@ public class NetworkActivity extends AppCompatActivity {
 
         listView.setAdapter(adapter);
 
-        networkService.makeRequest(NetworkMessage.GET_PLAYERS, new AbstractServiceResponseHandler() {
+        networkService.makeRequest(new Message(Message.GET_PLAYERS),
+                new BasicServiceResponseHandler() {
             @Override
-            public void onServerResponse(String response) {
-                final List<String> respList = NetworkMessage.toList(response);
-
-                if(respList.get(0).equals(NetworkMessage.GET_PLAYERS)){
+            public void onServerResponse(Message response) {
+                if(response.getCode().equals(Message.GET_PLAYERS)){
                     list.clear();
-                    list.addAll(respList.subList(1, respList.size() - 1));
+                    list.addAll(response.getArguments());
                     adapter.notifyDataSetChanged();
                 }
             }
         });
     }
 
-    private class AbstractServiceResponseHandler implements ServiceResponseHandler{
+    public void invitePlayer(View view) {
+        TextView textView = (TextView) view;
+        final String name = textView.getText().toString();
+
+        networkService.makeRequest(new Message(Message.INVITE, name),
+                new BasicServiceResponseHandler() {
+            @Override
+            public void onServerResponse(Message response) {
+                if(response.getCode().equals(Message.OK)){
+                    startGame(name);
+                }
+                else if(response.getCode().equals(Message.NO)){
+                    alertDialog.createInfoDialog("Player didn't accept your invite");
+                }
+                else{
+                    alertDialog.createInfoDialog(response.getArguments().get(0));
+                }
+            }
+        });
+    }
+
+    private void startGame(String name){
+        Intent intent = new Intent(this, NetworkGameActivity.class);
+        intent.putExtra("NAME", name);
+        startActivity(intent);
+    }
+
+    private class BasicServiceResponseHandler implements ServiceResponseHandler{
 
         @Override
         public void onConnectionError(String error) {
@@ -151,7 +200,7 @@ public class NetworkActivity extends AppCompatActivity {
         }
 
         @Override
-        public void onServerResponse(String response) {
+        public void onServerResponse(Message response) {
             // Empty for cases when server response is not needed (initializing connection)
         }
     }

@@ -43,4 +43,15 @@ public class AlertDialog extends Dialog {
         alertDialog.show();
     }
 
+    public void createQuestionDialog(String msg, OnClickListener listenerOK,
+                                     OnClickListener listenerNo){
+        android.app.AlertDialog alertDialog = new android.app.AlertDialog.Builder(activity).create();
+        alertDialog.setTitle("Response");
+        alertDialog.setMessage(msg);
+        alertDialog.setButton(android.app.AlertDialog.BUTTON_POSITIVE, "OK", listenerOK);
+        alertDialog.setButton(android.app.AlertDialog.BUTTON_NEGATIVE, "NO", listenerNo);
+        alertDialog.setOwnerActivity(activity);
+        alertDialog.show();
+    }
+
 }
