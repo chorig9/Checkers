@@ -6,6 +6,7 @@ import android.content.Intent;
 import android.content.ServiceConnection;
 import android.os.Bundle;
 import android.os.IBinder;
+import android.util.Log;
 import android.view.View;
 import android.util.Pair;
 
@@ -24,6 +25,8 @@ public class NetworkGameActivity extends GameActivity{
 
         Bundle bundle = getIntent().getExtras();
         String otherName = bundle.getString("NAME");
+
+        initGame();
     }
 
     @Override
@@ -57,6 +60,7 @@ public class NetworkGameActivity extends GameActivity{
             networkService.startGame(new GameController() {
                 @Override
                 public void onMessage(Message message) {
+                    Log.d("ABCD", board.getCurrentPlayer().name());
                     switch (message.getCode()){
                         case Message.START_GAME:
                             String player = message.getArguments().get(0);
@@ -75,6 +79,8 @@ public class NetworkGameActivity extends GameActivity{
                             break;
                         case Message.UNDO_MOVE:
                             board.undoMove();
+                            boardView.setPieces(board.getPieces());
+                            boardView.postInvalidate();
                             break;
                         default:
                             break;
@@ -103,7 +109,7 @@ public class NetworkGameActivity extends GameActivity{
                     // stop game
                     // ERROR
                 }
-                networkService.sendMessage(new Message(Message.MOVE,
+                networkService.sendGameMessage(new Message(Message.MOVE,
                         board.getSelectedPiece().getPosition().toString(), position.toString()));
                 board.moveSelectedPiece(position);
                 boardView.setHints(null);
@@ -123,7 +129,7 @@ public class NetworkGameActivity extends GameActivity{
     {
         super.undoMove(view);
             //TODO - is bounded?
-        networkService.sendMessage(new Message(Message.UNDO_MOVE));
+        networkService.sendGameMessage(new Message(Message.UNDO_MOVE));
     }
 
 }

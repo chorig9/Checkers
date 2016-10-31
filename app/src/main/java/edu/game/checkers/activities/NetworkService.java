@@ -14,10 +14,10 @@ import java.io.InputStreamReader;
 import java.io.OutputStream;
 import java.io.PrintWriter;
 import java.net.Socket;
-import java.util.ArrayList;
-import java.util.List;
-import java.util.PriorityQueue;
 import java.util.Queue;
+import java.util.concurrent.ArrayBlockingQueue;
+import java.util.logging.Level;
+import java.util.logging.Logger;
 
 
 public class NetworkService extends Service {
@@ -28,96 +28,53 @@ public class NetworkService extends Service {
     private final static String HOST = "89.40.127.125";
 
     // in ms
-    private final static int SERVER_TIMEOUT = 600;
-    private final static int USER_TIMEOUT = 60000;
-    private final static int CONNECTION_TIMEOUT = 6000;
+    public final static int SERVER_TIMEOUT = 1000;
+    public final static int USER_TIMEOUT = 10000;
+
+    private final static int QUEUE_CAPACITY = 10;
 
     private BufferedReader in;
     private PrintWriter out;
-
-    private class Request{
-        final Message msg;
-        final ServiceResponseHandler handler;
-        final boolean expectResponse;
-
-        /**
-         * @param msg - message
-         * @param handler - response handler
-         * @param expectResponse - will player respond?
-         */
-        Request(Message msg, ServiceResponseHandler handler, boolean expectResponse){
-            this.msg = msg;
-            this.handler = handler;
-            this.expectResponse = expectResponse;
-        }
-    }
-
     private volatile boolean connected = false;
-    //private List<AsyncTask<Void, Void, Void>> requests = new ArrayList<>();
-    private volatile List<Request> requests = new ArrayList<>();
-    private Queue<Message> serverRequests = new PriorityQueue<>();
 
     private volatile boolean inGame = false;
     private GameController gameController;
 
-    public void connectToServer(ServiceResponseHandler callback, ServiceRequestHandler requestCallback)
+    private Queue<Message> responseQueue = new ArrayBlockingQueue<>(QUEUE_CAPACITY);
+
+    public void connectToServer(ServerRequestHandler callback)
     {
-        new ConnectToServerTask(callback, requestCallback).execute();
+        new ConnectToServerTask(callback).execute();
     }
 
-    public void startMainThread(final ServiceRequestHandler callback)
+    public void startMainThread(final ServerRequestHandler callback)
     {
         Thread thread = new Thread(new Runnable() {
             @Override
             public void run() {
-                while(connected){
-                    try{
-                        if(in.ready()){
-                            Message msg = new Message(in.readLine());
+                try{
+                    while(connected){
+                        // blocking
+                        Message msg = new Message(in.readLine());
+                        Log.d("ABCD", msg.toString());
 
-                            switch (msg.getCode()){
-                                case Message.INVITE:
-                                    callback.onInvite(msg.getArguments().get(0));
-                                    break;
-                                default:
-                                    if(inGame)
-                                        gameController.onMessage(msg);
-                                    break;
-                            }
-                        }
-                        else if(!requests.isEmpty()){
-                            Log.d("requests", requests.toString());
-                            Request request = requests.get(0);
-                            requests.remove(0);
-
-                            // send request
-                            out.println(request.msg.toString());
-
-                            if(request.expectResponse){
-                                try{
-                                    // wait for response
-                                    long startTime = System.currentTimeMillis();
-                                    while(System.currentTimeMillis() - startTime < USER_TIMEOUT
-                                            && !in.ready()){
-                                    }
-
-                                    if(in.ready())
-                                        request.handler.onServerResponse(new Message(in.readLine()));
-                                    else // exception if no response
-                                        request.handler.onServerResponse(new Message(Message.TIMEOUT));
-                                }
-                                catch (IOException e){
-                                    callback.onConnectionError(e.getMessage());
-                                    throw e;
-                                }
-                            }
+                        switch (msg.getType()){
+                            case Message.REQUEST:
+                                new HandleRequestTask(callback).execute(msg);
+                                break;
+                            case Message.RESPONSE:
+                                responseQueue.add(msg);
+                                break;
+                            case Message.GAME:
+                                if(inGame)
+                                    new HandleGameTask(gameController).execute(msg);
+                                break;
                         }
                     }
-                    catch (IOException e){
-                        callback.onConnectionError(e.getMessage());
-                        connected = false;
-                        return;
-                    }
+                }
+                catch (IOException e){
+                    callback.onConnectionError(e.getMessage());
+                    connected = false;
                 }
             }
         });
@@ -125,27 +82,28 @@ public class NetworkService extends Service {
         thread.start();
     }
 
-    public void makeRequest(final Message msg, final ServiceResponseHandler callback)
+    public void makeRequest(final Message msg, int timeout, final ServerResponseHandler callback)
     {
-        //requests.add(new MakeRequestTask(callback, msg));
-        requests.add(new Request(msg, callback, true));
+        msg.addPrefix(Message.REQUEST);
+        new MakeRequestTask(callback, timeout).execute(msg);
     }
 
-    public void sendMessage(final Message msg)
+    public void sendResponse(final Message msg)
     {
-        //requests.add(new SendMessageTask(msg));
-        requests.add(new Request(msg, null, false));
+        msg.addPrefix(Message.RESPONSE);
+        new SendMessageTask().execute(msg);
+    }
+
+    public void sendGameMessage(final Message msg)
+    {
+        msg.addPrefix(Message.GAME);
+        new SendMessageTask().execute(msg);
     }
 
     public void startGame(GameController controller)
     {
         this.gameController = controller;
         inGame = true;
-    }
-
-    public boolean isConnected()
-    {
-        return connected;
     }
 
     @Override
@@ -156,7 +114,7 @@ public class NetworkService extends Service {
                 in.close();
         }
         catch(IOException e) {
-            // TODO - log?
+            Logger.getAnonymousLogger().log(Level.FINE, "onDestroy error");
         }
     }
 
@@ -172,76 +130,58 @@ public class NetworkService extends Service {
         }
     }
 
-    private class MakeRequestTask extends AsyncTask<Void, Void, Void>{
+    private class MakeRequestTask extends AsyncTask<Message, Void, Void>{
 
-        ServiceResponseHandler callback;
+        ServerResponseHandler callback;
         Message response = null;
-        Exception exception = null;
-        Message msg;
+        int timeout;
 
-        public MakeRequestTask(ServiceResponseHandler callback, Message msg){
+        public MakeRequestTask(ServerResponseHandler callback, int timeout){
             this.callback = callback;
-            this.msg = msg;
+            this.timeout = timeout;
         }
 
         @Override
-        protected Void doInBackground(Void... msg) {
-            try{
-                // send request
-                out.println(this.msg.toString());
+        protected Void doInBackground(Message... msg) {
+            // send request
+            out.println(msg[0].toString());
 
-                // wait for response
-                long startTime = System.currentTimeMillis();
-                while(System.currentTimeMillis() - startTime < SERVER_TIMEOUT
-                        && !in.ready()){
-                }
+            // wait for response
+            long startTime = System.currentTimeMillis();
+            while(System.currentTimeMillis() - startTime < timeout
+                    && responseQueue.isEmpty()){
+            }
 
-                if(in.ready())
-                    response = new Message(in.readLine());
-                else // exception if no response
-                    response = new Message(Message.TIMEOUT);
-            }
-            catch(IOException e){
-                exception = e;
-            }
+            if(!responseQueue.isEmpty())
+                response = responseQueue.poll();
+            else
+                response = new Message(Message.TIMEOUT, "timeout");
 
             return null;
         }
 
         @Override
         protected void onPostExecute(Void aVoid) {
-            if(response != null)
-                callback.onServerResponse(response);
-            else
-                callback.onConnectionError(exception.getMessage());
+            callback.onServerResponse(response);
         }
     }
 
-    private class SendMessageTask extends AsyncTask<Void, Void, Void>
+    private class SendMessageTask extends AsyncTask<Message, Void, Void>
     {
-        Message msg;
-
-        public SendMessageTask(Message msg){
-            this.msg = msg;
-        }
-
         @Override
-        protected Void doInBackground(Void... params) {
-            out.println(msg.toString());
+        protected Void doInBackground(Message... msg) {
+            out.println(msg[0].toString());
             return null;
         }
     }
 
     private class ConnectToServerTask extends AsyncTask<Void, Void, Void> {
 
-        ServiceResponseHandler callback;
-        ServiceRequestHandler requestCallback;
+        ServerRequestHandler callback;
         Exception exception = null;
 
-        public ConnectToServerTask(ServiceResponseHandler callback,
-                                   ServiceRequestHandler requestCallback){
+        public ConnectToServerTask(ServerRequestHandler callback){
             this.callback = callback;
-            this.requestCallback = requestCallback;
         }
 
         @Override
@@ -268,8 +208,45 @@ public class NetworkService extends Service {
                 callback.onConnectionError(exception.getMessage());
             else {
                 connected = true;
-                startMainThread(requestCallback);
+                startMainThread(callback);
             }
+        }
+    }
+
+    private class HandleGameTask extends AsyncTask<Message, Void, Void>
+    {
+        GameController callback;
+
+        public HandleGameTask(GameController callback){
+            this.callback = callback;
+        }
+
+        @Override
+        protected Void doInBackground(Message... params) {
+            callback.onMessage(params[0]);
+            return null;
+        }
+    }
+
+    // to avoid changing view from wrong thread exception (maybe not most elegant, but works)
+    private class HandleRequestTask extends AsyncTask<Message, Void, Void>{
+
+        ServerRequestHandler callback;
+        Message msg;
+
+        public HandleRequestTask(ServerRequestHandler callback){
+            this.callback = callback;
+        }
+
+        @Override
+        protected Void doInBackground(Message... params) {
+            msg = params[0];
+            return null;
+        }
+
+        @Override
+        protected void onPostExecute(Void aVoid) {
+            callback.onServerRequest(msg);
         }
     }
 }

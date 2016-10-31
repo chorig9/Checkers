@@ -28,8 +28,6 @@ public class NetworkActivity extends AppCompatActivity {
     private NetworkService networkService;
     private boolean bound = false;
 
-    Handler handler = new Handler();
-
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
@@ -69,34 +67,7 @@ public class NetworkActivity extends AppCompatActivity {
             networkService = binder.getService();
             bound = true;
 
-            networkService.connectToServer(new BasicServiceResponseHandler(),
-                    new ServiceRequestHandler() {
-                        @Override
-                        public void onInvite(final String name) {
-                            new AlertDialog(NetworkActivity.this).createQuestionDialog(name
-                                            + "invited you, accept?",
-                                    new DialogInterface.OnClickListener() {
-                                        @Override
-                                        public void onClick(DialogInterface dialog, int which) {
-                                            networkService.sendMessage(new Message(Message.OK));
-                                            startGame(name);
-                                            dialog.dismiss();
-                                        }
-                                    },
-                                    new DialogInterface.OnClickListener() {
-                                        @Override
-                                        public void onClick(DialogInterface dialog, int which) {
-                                            networkService.sendMessage(new Message(Message.NO));
-                                            dialog.dismiss();
-                                        }
-                                    });
-                        }
-
-                        @Override
-                        public void onConnectionError(String error) {
-                            new AlertDialog(NetworkActivity.this).createErrorDialog(error);
-                        }
-                    });
+            networkService.connectToServer(new ServerRequestHandlerAdapter());
         }
 
         @Override
@@ -131,7 +102,7 @@ public class NetworkActivity extends AppCompatActivity {
         int options = bundle.getInt("options");
 
         networkService.makeRequest(new Message(Message.HI, name, Integer.toString(options)),
-                new BasicServiceResponseHandler() {
+                NetworkService.SERVER_TIMEOUT , new ServerResponseHandler() {
             @Override
             public void onServerResponse(final Message response) {
                 if(response.getCode().equals(Message.OK))
@@ -156,16 +127,16 @@ public class NetworkActivity extends AppCompatActivity {
         listView.setAdapter(adapter);
 
         networkService.makeRequest(new Message(Message.GET_PLAYERS),
-                new BasicServiceResponseHandler() {
-            @Override
-            public void onServerResponse(Message response) {
-                if(response.getCode().equals(Message.GET_PLAYERS)){
-                    list.clear();
-                    list.addAll(response.getArguments());
-                    adapter.notifyDataSetChanged();
-                }
-            }
-        });
+                NetworkService.SERVER_TIMEOUT, new ServerResponseHandler() {
+                    @Override
+                    public void onServerResponse(final Message response) {
+                        if(response.getCode().equals(Message.GET_PLAYERS)){
+                            list.clear();
+                            list.addAll(response.getArguments());
+                            adapter.notifyDataSetChanged();
+                        }
+                    }
+                });
     }
 
     public void invitePlayer(View view) {
@@ -173,9 +144,9 @@ public class NetworkActivity extends AppCompatActivity {
         final String name = textView.getText().toString();
 
         networkService.makeRequest(new Message(Message.INVITE, name),
-                new BasicServiceResponseHandler() {
+                NetworkService.USER_TIMEOUT, new ServerResponseHandler() {
             @Override
-            public void onServerResponse(Message response) {
+            public void onServerResponse(final Message response) {
                 if(response.getCode().equals(Message.OK)){
                     startGame(name);
                 }
@@ -185,8 +156,7 @@ public class NetworkActivity extends AppCompatActivity {
                 else{
                     new AlertDialog(NetworkActivity.this).createInfoDialog(response.getArguments().get(0));
                 }
-            }
-        });
+            }});
     }
 
     private void startGame(String name){
@@ -195,16 +165,37 @@ public class NetworkActivity extends AppCompatActivity {
         startActivity(intent);
     }
 
-    private class BasicServiceResponseHandler implements ServiceResponseHandler{
+    private class ServerRequestHandlerAdapter implements ServerRequestHandler {
+
+        @Override
+        public void onServerRequest(final Message msg) {
+            switch (msg.getCode()){
+                case Message.INVITE:
+                    new AlertDialog(NetworkActivity.this).createQuestionDialog(
+                            msg.getArguments().get(0) + "invited you, accept?",
+                            new DialogInterface.OnClickListener() { // 'ok' button
+                                @Override
+                                public void onClick(DialogInterface dialog, int which) {
+                                    networkService.sendResponse(new Message(Message.OK));
+                                    startGame(msg.getArguments().get(0));
+                                    dialog.dismiss();
+                                }
+                            },
+                            new DialogInterface.OnClickListener() { // 'no' button
+                                @Override
+                                public void onClick(DialogInterface dialog, int which) {
+                                    networkService.sendResponse(new Message(Message.NO));
+                                    dialog.dismiss();
+                                }
+                            });
+                    break;
+            }
+        }
 
         @Override
         public void onConnectionError(String error) {
             new AlertDialog(NetworkActivity.this).createErrorDialog(error);
         }
-
-        @Override
-        public void onServerResponse(Message response) {
-            // Empty for cases when server response is not needed (initializing connection)
-        }
     }
+
 }

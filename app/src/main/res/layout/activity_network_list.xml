@@ -8,7 +8,9 @@
         android:layout_width="match_parent"
         android:layout_height="match_parent"
         android:choiceMode="singleChoice"
-        android:divider="@color/colorPrimary">
+        android:divider="#4169E1"
+        android:dividerHeight="2dp"
+        >
     </ListView>
 
 </LinearLayout>

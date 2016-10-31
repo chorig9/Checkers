@@ -142,7 +142,7 @@ public class Board{
         return selectedPiece;
     }
 
-    public boolean canAnyPieceJump(Player player)
+    private boolean canAnyPieceJump(Player player)
     {
         for(int x = 0; x <8; x++)
         {
@@ -157,7 +157,7 @@ public class Board{
         return false;
     }
 
-    public int getMaxNumberOfCaptures(Player player)
+    private int getMaxNumberOfCaptures(Player player)
     {
         int max = 0;
         for(int x = 0; x <8; x++)

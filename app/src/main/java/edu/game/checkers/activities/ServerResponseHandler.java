@@ -1,9 +1,7 @@
 package edu.game.checkers.activities;
 
 // handles service responses after request
-public interface ServiceResponseHandler {
-
-    void onConnectionError(String error);
+public interface ServerResponseHandler {
 
     void onServerResponse(Message response);
 

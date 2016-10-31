@@ -35,10 +35,15 @@ public class Message {
             INFO = "info",
             UNDO_MOVE = "undo_move";
 
+    public final static char REQUEST = '$',
+            RESPONSE = '%',
+            GAME = '^';
+
     private String msg = "";
 
-    public Message(String... params)
-    {
+    enum TYPE {REQUEST, RESPONSE, GAME, NULL}
+
+    Message(String... params){
         if(params.length > 0)
         {
             msg += params[0];
@@ -47,27 +52,38 @@ public class Message {
         }
     }
 
-    public Message(String msg)
+    void addPrefix(char prefix)
     {
-        this.msg = msg;
+        msg = prefix + msg;
     }
 
-    public String getCode()
+    char getType()
+    {
+        if(msg == null || msg.length() == 0)
+            return '0';
+        return msg.charAt(0);
+    }
+
+    String getCode()
     {
         int separatorIndex = msg.indexOf(SEPARATOR);
         if(separatorIndex == -1)
-            return msg;
+            return msg.substring(1);
         else
-            return msg.substring(0, separatorIndex);
+            return msg.substring(1, separatorIndex);
     }
 
-    public List<String> getArguments()
+    List<String> getArguments()
     {
         List<String> list = Arrays.asList(msg.split(SEPARATOR));
-        if(list.size() <= 1)
-            return new ArrayList<>();
-        else
-            return list.subList(1, list.size());
+
+        if(list.size() <= 1){
+            List<String> arguments = new ArrayList<>();
+            arguments.add("Empty");
+            return arguments;
+        }
+
+        return list.subList(1, list.size());
     }
 
     public Pair<Position, Position> parseMove()
@@ -77,9 +93,9 @@ public class Message {
 
         int x1 = Integer.decode(coors1[0]), y1 = Integer.decode(coors1[1]);
         String mv2 = getArguments().get(1);
-        String coors2[] = mv1.split(Position.SEPARATOR);
+        String coors2[] = mv2.split(Position.SEPARATOR);
 
-        int x2 = Integer.decode(coors1[0]), y2 = Integer.decode(coors1[1]);
+        int x2 = Integer.decode(coors2[0]), y2 = Integer.decode(coors2[1]);
 
         return new Pair<>(new Position(x1, y1), new Position(x2, y2));
     }

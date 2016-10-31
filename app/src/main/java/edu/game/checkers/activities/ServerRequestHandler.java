@@ -1,9 +1,9 @@
 package edu.game.checkers.activities;
 
 // handles server requests
-public interface ServiceRequestHandler {
+public interface ServerRequestHandler {
 
-    void onInvite(String name);
+    void onServerRequest(Message msg);
 
     void onConnectionError(String error);
 
