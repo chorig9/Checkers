@@ -30,11 +30,11 @@ public class NetworkService extends Service {
     // in ms
     public final static int SERVER_TIMEOUT = 1000;
     public final static int USER_TIMEOUT = 10000;
-
     private final static int QUEUE_CAPACITY = 10;
 
     private BufferedReader in;
     private PrintWriter out;
+    private Socket socket;
     private volatile boolean connected = false;
 
     private volatile boolean inGame = false;
@@ -56,7 +56,6 @@ public class NetworkService extends Service {
                     while(connected){
                         // blocking
                         Message msg = new Message(in.readLine());
-                        Log.d("ABCD", msg.toString());
 
                         switch (msg.getType()){
                             case Message.REQUEST:
@@ -73,7 +72,7 @@ public class NetworkService extends Service {
                     }
                 }
                 catch (IOException e){
-                    callback.onConnectionError(e.getMessage());
+                    new HandleErrorTask(callback).execute(e.getMessage());
                     connected = false;
                 }
             }
@@ -86,6 +85,12 @@ public class NetworkService extends Service {
     {
         msg.addPrefix(Message.REQUEST);
         new MakeRequestTask(callback, timeout).execute(msg);
+    }
+
+    public void sendRequest(final Message msg)
+    {
+        msg.addPrefix(Message.REQUEST);
+        new MakeRequestTask(null, 0).execute(msg);
     }
 
     public void sendResponse(final Message msg)
@@ -109,13 +114,7 @@ public class NetworkService extends Service {
     @Override
     public void onDestroy() {
         connected = false;
-        try {
-            if(in != null)
-                in.close();
-        }
-        catch(IOException e) {
-            Logger.getAnonymousLogger().log(Level.FINE, "onDestroy error");
-        }
+        new EndConnectionTask().execute();
     }
 
     @Override
@@ -146,23 +145,26 @@ public class NetworkService extends Service {
             // send request
             out.println(msg[0].toString());
 
-            // wait for response
-            long startTime = System.currentTimeMillis();
-            while(System.currentTimeMillis() - startTime < timeout
-                    && responseQueue.isEmpty()){
-            }
+            if(callback != null) {
+                // wait for response
+                long startTime = System.currentTimeMillis();
+                while(System.currentTimeMillis() - startTime < timeout
+                        && responseQueue.isEmpty()){
+                }
 
-            if(!responseQueue.isEmpty())
-                response = responseQueue.poll();
-            else
-                response = new Message(Message.TIMEOUT, "timeout");
+                if(!responseQueue.isEmpty())
+                    response = responseQueue.poll();
+                else
+                    response = new Message(Message.TIMEOUT, "timeout");
+            }
 
             return null;
         }
 
         @Override
         protected void onPostExecute(Void aVoid) {
-            callback.onServerResponse(response);
+            if(callback != null)
+                callback.onServerResponse(response);
         }
     }
 
@@ -187,7 +189,7 @@ public class NetworkService extends Service {
         @Override
         protected Void doInBackground(Void... params) {
             try{
-                Socket socket = new Socket(HOST, PORT);
+                socket = new Socket(HOST, PORT);
 
                 InputStream inStream = socket.getInputStream();
                 OutputStream outStream = socket.getOutputStream();
@@ -228,6 +230,25 @@ public class NetworkService extends Service {
         }
     }
 
+    private class EndConnectionTask extends AsyncTask<Void, Void, Void>{
+
+        @Override
+        protected Void doInBackground(Void... params) {
+            try {
+                if(in != null) {
+                    Message msg = new Message(Message.EXIT_SERVER);
+                    msg.addPrefix(Message.REQUEST);
+                    out.println(msg.toString());
+                    socket.close();
+                }
+            }
+            catch(IOException e) {
+                Logger.getAnonymousLogger().log(Level.FINE, "closing socket error");
+            }
+            return null;
+        }
+    }
+
     // to avoid changing view from wrong thread exception (maybe not most elegant, but works)
     private class HandleRequestTask extends AsyncTask<Message, Void, Void>{
 
@@ -247,6 +268,27 @@ public class NetworkService extends Service {
         @Override
         protected void onPostExecute(Void aVoid) {
             callback.onServerRequest(msg);
+        }
+    }
+
+    private class HandleErrorTask extends AsyncTask<String, Void, Void>{
+
+        ServerRequestHandler callback;
+        String msg;
+
+        public HandleErrorTask(ServerRequestHandler callback){
+            this.callback = callback;
+        }
+
+        @Override
+        protected Void doInBackground(String... params) {
+            msg = params[0];
+            return null;
+        }
+
+        @Override
+        protected void onPostExecute(Void aVoid) {
+            callback.onConnectionError(msg);
         }
     }
 }

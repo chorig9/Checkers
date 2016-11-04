@@ -22,27 +22,10 @@ public class MainActivity extends AppCompatActivity {
                 WindowManager.LayoutParams.FLAG_FULLSCREEN);
 
         setContentView(R.layout.activity_main);
-        loadOptions();
-    }
-
-    @Override
-    protected void onResume() {
-        super.onResume();
-
-        loadOptions();
-    }
-
-    private void loadOptions()
-    {
-        SharedPreferences preferences = getSharedPreferences(OptionsActivity.OPTIONS_FILE,
-                MODE_PRIVATE);
-
-        options = preferences.getInt("options", 0);
     }
 
     public void startGame(View view) {
         Intent selectTypeIntent = new Intent(this, SelectTypeActivity.class);
-        selectTypeIntent.putExtra("options", options);
         startActivity(selectTypeIntent);
     }
 

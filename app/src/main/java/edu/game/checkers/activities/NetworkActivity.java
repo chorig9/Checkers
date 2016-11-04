@@ -98,8 +98,10 @@ public class NetworkActivity extends AppCompatActivity {
         editor.putString(NAME,  name);
         editor.apply();
 
-        Bundle bundle = getIntent().getExtras();
-        int options = bundle.getInt("options");
+        SharedPreferences optPreferences = getSharedPreferences(OptionsActivity.OPTIONS_FILE,
+                MODE_PRIVATE);
+
+        int options = optPreferences.getInt("options", 0);
 
         networkService.makeRequest(new Message(Message.HI, name, Integer.toString(options)),
                 NetworkService.SERVER_TIMEOUT , new ServerResponseHandler() {
@@ -151,18 +153,26 @@ public class NetworkActivity extends AppCompatActivity {
                     startGame(name);
                 }
                 else if(response.getCode().equals(Message.NO)){
-                    new AlertDialog(NetworkActivity.this).createInfoDialog("Player didn't accept your invite");
+                    new AlertDialog(NetworkActivity.this).
+                            createInfoDialog("Player didn't accept your invite");
                 }
                 else{
-                    new AlertDialog(NetworkActivity.this).createInfoDialog(response.getArguments().get(0));
+                    new AlertDialog(NetworkActivity.this).
+                            createInfoDialog(response.getArguments().get(0));
                 }
             }});
     }
 
-    private void startGame(String name){
-        Intent intent = new Intent(this, NetworkGameActivity.class);
-        intent.putExtra("NAME", name);
-        startActivity(intent);
+    private void startGame(final String name){
+        networkService.makeRequest(new Message(Message.START_GAME), NetworkService.USER_TIMEOUT,
+                new ServerResponseHandler(){
+            @Override
+            public void onServerResponse(Message response) {
+                Intent intent = new Intent(NetworkActivity.this, NetworkGameActivity.class);
+                intent.putExtra("NAME", name);
+                startActivity(intent);
+            }
+        });
     }
 
     private class ServerRequestHandlerAdapter implements ServerRequestHandler {
@@ -172,7 +182,7 @@ public class NetworkActivity extends AppCompatActivity {
             switch (msg.getCode()){
                 case Message.INVITE:
                     new AlertDialog(NetworkActivity.this).createQuestionDialog(
-                            msg.getArguments().get(0) + "invited you, accept?",
+                            msg.getArguments().get(0) + " invited you, accept?",
                             new DialogInterface.OnClickListener() { // 'ok' button
                                 @Override
                                 public void onClick(DialogInterface dialog, int which) {

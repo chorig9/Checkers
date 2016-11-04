@@ -41,8 +41,6 @@ public class Message {
 
     private String msg = "";
 
-    enum TYPE {REQUEST, RESPONSE, GAME, NULL}
-
     Message(String... params){
         if(params.length > 0)
         {

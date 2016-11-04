@@ -35,10 +35,6 @@ public class SelectTypeActivity extends AppCompatActivity {
                 return;
         }
 
-        Bundle bundle = getIntent().getExtras();
-        int options = bundle.getInt("options");
-
-        intent.putExtra("options", options);
         startActivity(intent);
     }
 }

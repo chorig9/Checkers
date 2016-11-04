@@ -20,6 +20,13 @@ public class NetworkGameActivity extends GameActivity{
     private boolean bound = false;
 
     @Override
+    public void onBackPressed() {
+        super.onBackPressed();
+
+        networkService.sendRequest(new Message(Message.EXIT_GAME));
+    }
+
+    @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
 
@@ -60,7 +67,6 @@ public class NetworkGameActivity extends GameActivity{
             networkService.startGame(new GameController() {
                 @Override
                 public void onMessage(Message message) {
-                    Log.d("ABCD", board.getCurrentPlayer().name());
                     switch (message.getCode()){
                         case Message.START_GAME:
                             String player = message.getArguments().get(0);
@@ -75,7 +81,8 @@ public class NetworkGameActivity extends GameActivity{
                             remoteClick(move.second);
                             break;
                         case Message.GAME_OVER:
-                            //TODO
+                            new AlertDialog(NetworkGameActivity.this).
+                                    createErrorDialog("Other player disconnected");
                             break;
                         case Message.UNDO_MOVE:
                             board.undoMove();
@@ -87,6 +94,8 @@ public class NetworkGameActivity extends GameActivity{
                     }
                 }
             });
+
+
         }
 
         @Override
@@ -129,6 +138,10 @@ public class NetworkGameActivity extends GameActivity{
     {
         super.undoMove(view);
             //TODO - is bounded?
+        if(board.getCurrentPlayer() != localPlayer){
+            boardView.setHints(null);
+            boardView.postInvalidate();
+        }
         networkService.sendGameMessage(new Message(Message.UNDO_MOVE));
     }
 

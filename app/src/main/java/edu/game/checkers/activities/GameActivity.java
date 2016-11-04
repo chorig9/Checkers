@@ -1,5 +1,6 @@
 package edu.game.checkers.activities;
 
+import android.content.SharedPreferences;
 import android.os.Bundle;
 import android.support.v7.app.AppCompatActivity;
 import android.view.MotionEvent;
@@ -14,6 +15,7 @@ import edu.game.checkers.logic.Position;
 
 public class GameActivity extends AppCompatActivity {
 
+    protected int options;
     protected Board board;
     protected BoardView boardView;
 
@@ -23,14 +25,15 @@ public class GameActivity extends AppCompatActivity {
         //Remove notification bar
         this.getWindow().setFlags(WindowManager.LayoutParams.FLAG_FULLSCREEN,
                 WindowManager.LayoutParams.FLAG_FULLSCREEN);
+
     }
 
     protected void initGame()
     {
+        SharedPreferences preferences = getSharedPreferences(OptionsActivity.OPTIONS_FILE,
+                MODE_PRIVATE);
+        options = preferences.getInt("options", 0);
         setContentView(R.layout.activity_game);
-
-        Bundle bundle = getIntent().getExtras();
-        int options = bundle.getInt("options");
 
         board = new Board(options);
 

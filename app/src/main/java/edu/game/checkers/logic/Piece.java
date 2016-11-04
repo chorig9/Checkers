@@ -17,8 +17,6 @@ public abstract class Piece{
     public void moveTo(Position position, Piece pieces[][])
     {
         // if this move is capturing this variable holds position of captured piece
-        // isMoveCapturing function wasn't used because it depends on board options
-        // which are unknown in this method
         // otherwise it is null
         Position capturedPiecePosition = getCapturedPiecePosition(position, pieces);
 
