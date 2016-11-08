@@ -1,7 +1,5 @@
 package edu.game.checkers.activities;
 
-import android.os.NetworkOnMainThreadException;
-import android.util.ArraySet;
 import android.util.Pair;
 
 import java.util.ArrayList;
@@ -27,6 +25,7 @@ public class Message {
             GAME_OVER = "game_over",// game has ended (one player won or draw)
             INVITE = "invite",           // invite player to game
             GET_PLAYERS = "get_players", // get list of all connected players
+            UPDATE_PLAYERS = "up_players",
             START_GAME = "start",
             CHANGE_OPTIONS = "options",
             MOVE = "move",               // game move

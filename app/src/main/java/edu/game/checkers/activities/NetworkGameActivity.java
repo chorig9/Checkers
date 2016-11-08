@@ -19,10 +19,11 @@ public class NetworkGameActivity extends GameActivity{
     private NetworkService networkService;
     private boolean bound = false;
 
+    private volatile  boolean active = false;
+
     @Override
     public void onBackPressed() {
         super.onBackPressed();
-
         networkService.sendRequest(new Message(Message.EXIT_GAME));
     }
 
@@ -39,6 +40,7 @@ public class NetworkGameActivity extends GameActivity{
     @Override
     protected void onStart() {
         super.onStart();
+        active = true;
         // Bind to NetworkService
         Intent intent = new Intent(this, NetworkService.class);
         bindService(intent, connection, Context.BIND_AUTO_CREATE);
@@ -47,6 +49,7 @@ public class NetworkGameActivity extends GameActivity{
     @Override
     protected void onStop() {
         super.onStop();
+        active = false;
         // Unbind from the service
         if (bound)
             unbindService(connection);
@@ -81,8 +84,9 @@ public class NetworkGameActivity extends GameActivity{
                             remoteClick(move.second);
                             break;
                         case Message.GAME_OVER:
-                            new AlertDialog(NetworkGameActivity.this).
-                                    createErrorDialog("Other player disconnected");
+                            if(active)
+                                new AlertDialog(NetworkGameActivity.this).
+                                        createErrorDialog("Other player disconnected");
                             break;
                         case Message.UNDO_MOVE:
                             board.undoMove();
@@ -94,8 +98,6 @@ public class NetworkGameActivity extends GameActivity{
                     }
                 }
             });
-
-
         }
 
         @Override
@@ -113,16 +115,16 @@ public class NetworkGameActivity extends GameActivity{
                         getValidPositions(board.getOptions(), board.getPieces()));
                 boardView.postInvalidate();
             } else if (board.canSelectedPieceBeMoved(position)) {
-                //TODO - is bounded?
                 if(!bound){
-                    // stop game
-                    // ERROR
+                    new AlertDialog(this).createErrorDialog("Connection error occurred");
                 }
-                networkService.sendGameMessage(new Message(Message.MOVE,
-                        board.getSelectedPiece().getPosition().toString(), position.toString()));
-                board.moveSelectedPiece(position);
-                boardView.setHints(null);
-                boardView.postInvalidate();
+                else{
+                    networkService.sendGameMessage(new Message(Message.MOVE,
+                            board.getSelectedPiece().getPosition().toString(), position.toString()));
+                    board.moveSelectedPiece(position);
+                    boardView.setHints(null);
+                    boardView.postInvalidate();
+                }
             }
         }
     }
@@ -137,12 +139,15 @@ public class NetworkGameActivity extends GameActivity{
     public void undoMove(View view)
     {
         super.undoMove(view);
-            //TODO - is bounded?
-        if(board.getCurrentPlayer() != localPlayer){
-            boardView.setHints(null);
-            boardView.postInvalidate();
+        if(!bound){
+            new AlertDialog(this).createErrorDialog("Connection error occurred");
         }
-        networkService.sendGameMessage(new Message(Message.UNDO_MOVE));
+        else{
+            if(board.getCurrentPlayer() != localPlayer){
+                boardView.setHints(null);
+                boardView.postInvalidate();
+            }
+            networkService.sendGameMessage(new Message(Message.UNDO_MOVE));
+        }
     }
-
 }

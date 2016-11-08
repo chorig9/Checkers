@@ -28,6 +28,12 @@ public class NetworkActivity extends AppCompatActivity {
     private NetworkService networkService;
     private boolean bound = false;
 
+    private ArrayList<String> list = new ArrayList<>();
+    private ArrayAdapter<String> adapter;
+    private ListView listView;
+
+    private volatile boolean active = false;
+
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
@@ -35,13 +41,13 @@ public class NetworkActivity extends AppCompatActivity {
                 WindowManager.LayoutParams.FLAG_FULLSCREEN);
 
         setContentView(R.layout.activity_enter_name);
-
         initName();
     }
 
     @Override
     protected void onStart() {
         super.onStart();
+        active = true;
         // Bind to NetworkService
         Intent intent = new Intent(this, NetworkService.class);
         bindService(intent, connection, Context.BIND_AUTO_CREATE);
@@ -50,6 +56,7 @@ public class NetworkActivity extends AppCompatActivity {
     @Override
     protected void onStop() {
         super.onStop();
+        active = false;
         // Unbind from the service
         if (bound)
         unbindService(connection);
@@ -89,7 +96,7 @@ public class NetworkActivity extends AppCompatActivity {
         ((EditText) findViewById(R.id.username)).setText(name);
     }
 
-    public void sendName(View view) {
+    public void connect(View view) {
         // save username
         SharedPreferences preferences = getSharedPreferences(OptionsActivity.OPTIONS_FILE,
                 MODE_PRIVATE);
@@ -100,7 +107,6 @@ public class NetworkActivity extends AppCompatActivity {
 
         SharedPreferences optPreferences = getSharedPreferences(OptionsActivity.OPTIONS_FILE,
                 MODE_PRIVATE);
-
         int options = optPreferences.getInt("options", 0);
 
         networkService.makeRequest(new Message(Message.HI, name, Integer.toString(options)),
@@ -119,10 +125,6 @@ public class NetworkActivity extends AppCompatActivity {
 
         setContentView(R.layout.activity_network_list);
 
-        final ArrayList<String> list = new ArrayList<>();
-        final ArrayAdapter<String> adapter;
-        final ListView listView;
-
         listView = (ListView) findViewById(R.id.players_list);
         adapter = new ArrayAdapter<>(this, R.layout.player_list_element, list);
 
@@ -134,7 +136,8 @@ public class NetworkActivity extends AppCompatActivity {
                     public void onServerResponse(final Message response) {
                         if(response.getCode().equals(Message.GET_PLAYERS)){
                             list.clear();
-                            list.addAll(response.getArguments());
+                            if(!response.getArguments().isEmpty())
+                                list.addAll(response.getArguments());
                             adapter.notifyDataSetChanged();
                         }
                     }
@@ -154,7 +157,7 @@ public class NetworkActivity extends AppCompatActivity {
                 }
                 else if(response.getCode().equals(Message.NO)){
                     new AlertDialog(NetworkActivity.this).
-                            createInfoDialog("Player didn't accept your invite");
+                            createInfoDialog("Player rejected your invite");
                 }
                 else{
                     new AlertDialog(NetworkActivity.this).
@@ -175,36 +178,47 @@ public class NetworkActivity extends AppCompatActivity {
         });
     }
 
+    //responsible for handling server requests and connection errors
     private class ServerRequestHandlerAdapter implements ServerRequestHandler {
 
         @Override
         public void onServerRequest(final Message msg) {
-            switch (msg.getCode()){
-                case Message.INVITE:
-                    new AlertDialog(NetworkActivity.this).createQuestionDialog(
-                            msg.getArguments().get(0) + " invited you, accept?",
-                            new DialogInterface.OnClickListener() { // 'ok' button
-                                @Override
-                                public void onClick(DialogInterface dialog, int which) {
-                                    networkService.sendResponse(new Message(Message.OK));
-                                    startGame(msg.getArguments().get(0));
-                                    dialog.dismiss();
-                                }
-                            },
-                            new DialogInterface.OnClickListener() { // 'no' button
-                                @Override
-                                public void onClick(DialogInterface dialog, int which) {
-                                    networkService.sendResponse(new Message(Message.NO));
-                                    dialog.dismiss();
-                                }
-                            });
-                    break;
+            if(active) {
+                switch (msg.getCode()) {
+                    case Message.INVITE:
+                        new AlertDialog(NetworkActivity.this).createQuestionDialog(
+                                msg.getArguments().get(0) + " invited you, accept?",
+                                new DialogInterface.OnClickListener() { // 'ok' button
+                                    @Override
+                                    public void onClick(DialogInterface dialog, int which) {
+                                        networkService.sendResponse(new Message(Message.OK));
+                                        startGame(msg.getArguments().get(0));
+                                        dialog.dismiss();
+                                    }
+                                },
+                                new DialogInterface.OnClickListener() { // 'no' button
+                                    @Override
+                                    public void onClick(DialogInterface dialog, int which) {
+                                        networkService.sendResponse(new Message(Message.NO));
+                                        dialog.dismiss();
+                                    }
+                                });
+                        break;
+                    case Message.UPDATE_PLAYERS:
+                        if (msg.getArguments().get(0).equals("-"))   // delete player from list
+                            list.remove(msg.getArguments().get(1));
+                        else
+                            list.add(msg.getArguments().get(1));    // add player to list
+                        adapter.notifyDataSetChanged();
+                        break;
+                }
             }
         }
 
         @Override
         public void onConnectionError(String error) {
-            new AlertDialog(NetworkActivity.this).createErrorDialog(error);
+            if(active)
+                new AlertDialog(NetworkActivity.this).createErrorDialog(error);
         }
     }
 

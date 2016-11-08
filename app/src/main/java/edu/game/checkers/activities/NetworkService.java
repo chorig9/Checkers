@@ -55,7 +55,14 @@ public class NetworkService extends Service {
                 try{
                     while(connected){
                         // blocking
-                        Message msg = new Message(in.readLine());
+                        String str = in.readLine();
+
+                        if(str == null){
+                            new EndConnectionTask().execute();
+                            return;
+                        }
+
+                        Message msg = new Message(str);
 
                         switch (msg.getType()){
                             case Message.REQUEST:
@@ -73,7 +80,6 @@ public class NetworkService extends Service {
                 }
                 catch (IOException e){
                     new HandleErrorTask(callback).execute(e.getMessage());
-                    connected = false;
                 }
             }
         });
@@ -114,7 +120,7 @@ public class NetworkService extends Service {
     @Override
     public void onDestroy() {
         connected = false;
-        new EndConnectionTask().execute();
+        new EndConnectionTask().execute(); // is it good idea to start async task in destructor?
     }
 
     @Override
