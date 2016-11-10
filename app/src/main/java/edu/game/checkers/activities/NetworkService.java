@@ -120,7 +120,7 @@ public class NetworkService extends Service {
     @Override
     public void onDestroy() {
         connected = false;
-        new EndConnectionTask().execute(); // is it good idea to start async task in destructor?
+        new EndConnectionTask().execute();
     }
 
     @Override
@@ -150,6 +150,7 @@ public class NetworkService extends Service {
         protected Void doInBackground(Message... msg) {
             // send request
             out.println(msg[0].toString());
+            out.flush();
 
             if(callback != null) {
                 // wait for response
@@ -179,6 +180,7 @@ public class NetworkService extends Service {
         @Override
         protected Void doInBackground(Message... msg) {
             out.println(msg[0].toString());
+            out.flush();
             return null;
         }
     }
@@ -245,6 +247,7 @@ public class NetworkService extends Service {
                     Message msg = new Message(Message.EXIT_SERVER);
                     msg.addPrefix(Message.REQUEST);
                     out.println(msg.toString());
+                    out.flush();
                     socket.close();
                 }
             }

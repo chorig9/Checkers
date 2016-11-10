@@ -13,7 +13,7 @@ public class Message {
     //Message should contain one of following string and possibly
     //some arguments after separator (separator before each argument)
 
-    public final static String SEPARATOR = "#";
+    public final static String SEPARATOR = "#", EXTRA_SEPARATOR = "@";
     public final static String HI = "hi",
             PLAYER_WHITE = "1",
             PLAYER_BLACK = "2",

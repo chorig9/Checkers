@@ -25,14 +25,20 @@ public class GameActivity extends AppCompatActivity {
         //Remove notification bar
         this.getWindow().setFlags(WindowManager.LayoutParams.FLAG_FULLSCREEN,
                 WindowManager.LayoutParams.FLAG_FULLSCREEN);
-
     }
 
     protected void initGame()
     {
-        SharedPreferences preferences = getSharedPreferences(OptionsActivity.OPTIONS_FILE,
-                MODE_PRIVATE);
-        options = preferences.getInt("options", 0);
+        // override options if specified
+        Bundle bundle = getIntent().getExtras();
+        int opts = bundle.getInt("options", -1);
+        if(opts != -1)
+            options = opts;
+        else {
+            SharedPreferences preferences = getSharedPreferences(OptionsActivity.OPTIONS_FILE,
+                    MODE_PRIVATE);
+            options = preferences.getInt(OptionsActivity.OPTIONS_KEY, 0);
+        }
         setContentView(R.layout.activity_game);
 
         board = new Board(options);

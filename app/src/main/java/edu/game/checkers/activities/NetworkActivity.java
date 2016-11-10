@@ -10,6 +10,7 @@ import android.os.Bundle;
 import android.os.Handler;
 import android.os.IBinder;
 import android.support.v7.app.AppCompatActivity;
+import android.util.Log;
 import android.view.View;
 import android.view.WindowManager;
 import android.widget.ArrayAdapter;
@@ -107,7 +108,7 @@ public class NetworkActivity extends AppCompatActivity {
 
         SharedPreferences optPreferences = getSharedPreferences(OptionsActivity.OPTIONS_FILE,
                 MODE_PRIVATE);
-        int options = optPreferences.getInt("options", 0);
+        int options = optPreferences.getInt(OptionsActivity.OPTIONS_KEY, 0);
 
         networkService.makeRequest(new Message(Message.HI, name, Integer.toString(options)),
                 NetworkService.SERVER_TIMEOUT , new ServerResponseHandler() {
@@ -146,33 +147,61 @@ public class NetworkActivity extends AppCompatActivity {
 
     public void invitePlayer(View view) {
         TextView textView = (TextView) view;
-        final String name = textView.getText().toString();
+        final String[] player = textView.getText().toString().split(Message.EXTRA_SEPARATOR);
+        final String name = player[0];
+        final int options = Integer.decode(player[1]);
 
-        networkService.makeRequest(new Message(Message.INVITE, name),
-                NetworkService.USER_TIMEOUT, new ServerResponseHandler() {
-            @Override
-            public void onServerResponse(final Message response) {
-                if(response.getCode().equals(Message.OK)){
-                    startGame(name);
-                }
-                else if(response.getCode().equals(Message.NO)){
-                    new AlertDialog(NetworkActivity.this).
-                            createInfoDialog("Player rejected your invite");
-                }
-                else{
-                    new AlertDialog(NetworkActivity.this).
-                            createInfoDialog(response.getArguments().get(0));
-                }
-            }});
+        final SharedPreferences optPreferences = getSharedPreferences(OptionsActivity.OPTIONS_FILE,
+                MODE_PRIVATE);
+        int myOptions = optPreferences.getInt(OptionsActivity.OPTIONS_KEY, 0);
+
+        if(options != myOptions){
+            new AlertDialog(this)
+                    .createQuestionDialog("If you continue your options will be temporarily changed, proceed?",
+                            new DialogInterface.OnClickListener() { // yes
+                                @Override
+                                public void onClick(DialogInterface dialog, int which) {
+                                    initializeGame(name, options);
+                                }
+                            }, new DialogInterface.OnClickListener() { // no
+                                @Override
+                                public void onClick(DialogInterface dialog, int which) {
+                                    // nothing
+                                }
+                            });
+        }
+        else{
+            initializeGame(name, options);
+        }
     }
 
-    private void startGame(final String name){
+    private void initializeGame(final String name, final int options) {
+        networkService.makeRequest(new Message(Message.INVITE, name),
+                NetworkService.USER_TIMEOUT, new ServerResponseHandler() {
+                    @Override
+                    public void onServerResponse(final Message response) {
+                        if(response.getCode().equals(Message.OK)){
+                            startGame(name, options);
+                        }
+                        else if(response.getCode().equals(Message.NO)){
+                            new AlertDialog(NetworkActivity.this).
+                                    createInfoDialog("Player rejected your invite");
+                        }
+                        else{
+                            new AlertDialog(NetworkActivity.this).
+                                    createInfoDialog(response.getArguments().get(0));
+                        }
+                    }});
+    }
+
+    private void startGame(final String name, final int options){
         networkService.makeRequest(new Message(Message.START_GAME), NetworkService.USER_TIMEOUT,
                 new ServerResponseHandler(){
             @Override
             public void onServerResponse(Message response) {
                 Intent intent = new Intent(NetworkActivity.this, NetworkGameActivity.class);
                 intent.putExtra("NAME", name);
+                intent.putExtra("options", options);
                 startActivity(intent);
             }
         });
@@ -192,7 +221,10 @@ public class NetworkActivity extends AppCompatActivity {
                                     @Override
                                     public void onClick(DialogInterface dialog, int which) {
                                         networkService.sendResponse(new Message(Message.OK));
-                                        startGame(msg.getArguments().get(0));
+                                        SharedPreferences optPreferences = getSharedPreferences(OptionsActivity.OPTIONS_FILE,
+                                                MODE_PRIVATE);
+                                        int options = optPreferences.getInt(OptionsActivity.OPTIONS_KEY, 0);
+                                        startGame(msg.getArguments().get(0), options);
                                         dialog.dismiss();
                                     }
                                 },

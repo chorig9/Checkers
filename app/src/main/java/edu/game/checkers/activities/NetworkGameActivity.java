@@ -6,9 +6,10 @@ import android.content.Intent;
 import android.content.ServiceConnection;
 import android.os.Bundle;
 import android.os.IBinder;
-import android.util.Log;
 import android.view.View;
 import android.util.Pair;
+import android.os.Handler;
+
 
 import edu.game.checkers.logic.Board;
 import edu.game.checkers.logic.Position;
@@ -21,20 +22,22 @@ public class NetworkGameActivity extends GameActivity{
 
     private volatile  boolean active = false;
 
+    private Handler handler = new Handler();
+
     @Override
     public void onBackPressed() {
         super.onBackPressed();
-        networkService.sendRequest(new Message(Message.EXIT_GAME));
+        endGame();
     }
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
+        initGame();
+
 
         Bundle bundle = getIntent().getExtras();
         String otherName = bundle.getString("NAME");
-
-        initGame();
     }
 
     @Override
@@ -49,11 +52,16 @@ public class NetworkGameActivity extends GameActivity{
     @Override
     protected void onStop() {
         super.onStop();
+        endGame();
         active = false;
         // Unbind from the service
         if (bound)
             unbindService(connection);
         bound = false;
+    }
+
+    private void endGame() {
+        networkService.sendRequest(new Message(Message.EXIT_GAME));
     }
 
     /** Defines callbacks for service binding, passed to bindService() */
@@ -85,8 +93,13 @@ public class NetworkGameActivity extends GameActivity{
                             break;
                         case Message.GAME_OVER:
                             if(active)
-                                new AlertDialog(NetworkGameActivity.this).
-                                        createErrorDialog("Other player disconnected");
+                                handler.post(new Runnable() {
+                                    @Override
+                                    public void run() {
+                                        new AlertDialog(NetworkGameActivity.this).
+                                                createErrorDialog("Other player has disconnected");
+                                    }
+                                });
                             break;
                         case Message.UNDO_MOVE:
                             board.undoMove();
@@ -139,15 +152,10 @@ public class NetworkGameActivity extends GameActivity{
     public void undoMove(View view)
     {
         super.undoMove(view);
-        if(!bound){
-            new AlertDialog(this).createErrorDialog("Connection error occurred");
+        if(board.getCurrentPlayer() != localPlayer){
+            boardView.setHints(null);
+            boardView.postInvalidate();
         }
-        else{
-            if(board.getCurrentPlayer() != localPlayer){
-                boardView.setHints(null);
-                boardView.postInvalidate();
-            }
-            networkService.sendGameMessage(new Message(Message.UNDO_MOVE));
-        }
+        networkService.sendGameMessage(new Message(Message.UNDO_MOVE));
     }
 }
