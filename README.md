@@ -1,1 +1,1 @@
-Checkers board for Android
+Checkers game for Android
