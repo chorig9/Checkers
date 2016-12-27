@@ -31,7 +31,9 @@ public class GameActivity extends AppCompatActivity {
     {
         // override options if specified
         Bundle bundle = getIntent().getExtras();
-        int opts = bundle.getInt("options", -1);
+        int opts = -1;
+        if(bundle != null)
+            opts = bundle.getInt("options", -1);
         if(opts != -1)
             options = opts;
         else {
@@ -41,67 +43,55 @@ public class GameActivity extends AppCompatActivity {
         }
         setContentView(R.layout.activity_game);
 
-        board = new Board(options);
-
         LinearLayout surface = (LinearLayout) findViewById(R.id.game_layout);
-        boardView = new BoardView(this, board.getPieces());
-        boardView.setOnTouchListener(new TouchManager());
+        boardView = new BoardView(this);
+        board = new Board(options, boardView);
+
+        boardView.setPieces(board.getPieces());
+        boardView.setOnTouchListener(createTouchManager());
         surface.addView(boardView);
-    }
-
-    // click performed by local player
-    public void localClick(Position position) {
-        if (board.canBeSelected(position)){
-            board.selectPiece(position);
-            boardView.setHints(board.getSelectedPiece().
-                    getValidPositions(board.getOptions(), board.getPieces()));
-            boardView.postInvalidate();
-        }
-        else if (board.canSelectedPieceBeMoved(position)){
-            board.moveSelectedPiece(position);
-            boardView.setHints(null);
-            boardView.postInvalidate();
-        }
-    }
-
-    // click performed by remote player (computer or online)
-    public void remoteClick(Position position)
-    {
-        if (board.canBeSelected(position)){
-            board.selectPiece(position);
-        }
-        else if (board.canSelectedPieceBeMoved(position)){
-            board.moveSelectedPiece(position);
-            boardView.postInvalidate();
-        }
     }
 
     public void undoMove(View view) {
         board.undoMove();
-        boardView.setPieces(board.getPieces());
-        if(board.getSelectedPiece() != null)
-            boardView.setHints(board.getSelectedPiece()
-                    .getValidPositions(board.getOptions(), board.getPieces()));
-        else
-            boardView.setHints(null);
-        boardView.postInvalidate();
     }
 
-    private class TouchManager implements View.OnTouchListener{
+    protected TouchManager createTouchManager(){
+        return new TouchManager();
+    }
 
-        @Override
-        public boolean onTouch(View v, MotionEvent event) {
+    private void gameOver()
+    {
+        new AlertDialog(this).createExitDialog("End", "Game Over");
+    }
+
+    protected class TouchManager implements View.OnTouchListener{
+
+        protected Position calculatePosition(View v, MotionEvent event){
             int tileSize = v.getWidth() / 8;
 
             int x = ((int) event.getX()) / tileSize;
             int y = ((int) event.getY()) / tileSize;
 
             if(x < 0 || x >= 8 || y < 0 || y >= 8)
+                return null;
+
+            if(((BoardView)v).getBoardRotation()){
+                x = 7 - x;
+                y = 7 - y;
+            }
+
+           return new Position(x, y);
+        }
+
+        @Override
+        public boolean onTouch(View v, MotionEvent event) {
+            Position position = calculatePosition(v, event);
+
+            if(position == null)
                 return false;
 
-            Position position = new Position(x, y);
-
-            localClick(position);
+            board.clicked(position, true);
 
             return true;
         }

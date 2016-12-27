@@ -14,9 +14,9 @@ public class AlertDialog extends Dialog {
         this.activity = (Activity) activity;
     }
 
-    public void createErrorDialog(String msg){
+    public void createExitDialog(String title, String msg){
         android.app.AlertDialog alertDialog = new android.app.AlertDialog.Builder(activity).create();
-        alertDialog.setTitle("Error");
+        alertDialog.setTitle(title);
         alertDialog.setMessage(msg);
         alertDialog.setButton(android.app.AlertDialog.BUTTON_NEUTRAL, "OK",
                 new DialogInterface.OnClickListener() {

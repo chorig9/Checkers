@@ -6,15 +6,18 @@ import android.content.Intent;
 import android.content.ServiceConnection;
 import android.os.Bundle;
 import android.os.IBinder;
+import android.view.MotionEvent;
 import android.view.View;
 import android.util.Pair;
 import android.os.Handler;
+import android.widget.TextView;
 
 
+import edu.board.checkers.R;
 import edu.game.checkers.logic.Board;
 import edu.game.checkers.logic.Position;
 
-public class NetworkGameActivity extends GameActivity{
+public class NetworkGameActivity extends GameActivity {
 
     private Board.Player localPlayer;
     private NetworkService networkService;
@@ -35,9 +38,11 @@ public class NetworkGameActivity extends GameActivity{
         super.onCreate(savedInstanceState);
         initGame();
 
-
         Bundle bundle = getIntent().getExtras();
-        String otherName = bundle.getString("NAME");
+        String otherName = getString(R.string.opponent) + bundle.getString("NAME");
+
+        TextView title = (TextView) findViewById(R.id.title_text);
+        title.setText(otherName);
     }
 
     @Override
@@ -81,15 +86,20 @@ public class NetworkGameActivity extends GameActivity{
                     switch (message.getCode()){
                         case Message.START_GAME:
                             String player = message.getArguments().get(0);
-                            if(player.equals(Message.PLAYER_BLACK))
+                            if(player.equals(Message.PLAYER_BLACK)) {
                                 localPlayer = Board.Player.BLACK;
+                                boardView.rotate();
+                            }
                             else
                                 localPlayer = Board.Player.WHITE;
                             break;
                         case Message.MOVE:
                             Pair<Position, Position> move = message.parseMove();
-                            remoteClick(move.first);
-                            remoteClick(move.second);
+
+                            if(board.getCurrentPlayer() != localPlayer) {
+                                board.clicked(move.first, false);
+                                board.clicked(move.second, false);
+                            }
                             break;
                         case Message.GAME_OVER:
                             if(active)
@@ -97,7 +107,7 @@ public class NetworkGameActivity extends GameActivity{
                                     @Override
                                     public void run() {
                                         new AlertDialog(NetworkGameActivity.this).
-                                                createErrorDialog("Other player has disconnected");
+                                                createExitDialog("End", "Other player has disconnected");
                                     }
                                 });
                             break;
@@ -120,42 +130,35 @@ public class NetworkGameActivity extends GameActivity{
     };
 
     @Override
-    public void localClick(Position position) {
-        if(board.getCurrentPlayer() == localPlayer) {
-            if (board.canBeSelected(position)) {
-                board.selectPiece(position);
-                boardView.setHints(board.getSelectedPiece().
-                        getValidPositions(board.getOptions(), board.getPieces()));
-                boardView.postInvalidate();
-            } else if (board.canSelectedPieceBeMoved(position)) {
-                if(!bound){
-                    new AlertDialog(this).createErrorDialog("Connection error occurred");
-                }
-                else{
-                    networkService.sendGameMessage(new Message(Message.MOVE,
-                            board.getSelectedPiece().getPosition().toString(), position.toString()));
-                    board.moveSelectedPiece(position);
-                    boardView.setHints(null);
-                    boardView.postInvalidate();
-                }
-            }
-        }
-    }
+    protected TouchManager createTouchManager(){
+        return new TouchManager(){
+            @Override
+            public boolean onTouch(View v, MotionEvent event) {
+                Position position = calculatePosition(v, event);
 
-    @Override
-    public void remoteClick(Position position){
-        if(board.getCurrentPlayer() != localPlayer)
-            super.remoteClick(position);
+                if(position == null)
+                    return false;
+
+                Position prevPosition = null;
+                if(board.getSelectedPiece() != null)
+                    prevPosition = board.getSelectedPiece().getPosition();
+
+                Board.ClickResult result = board.clicked(position, true);
+
+                if(result == Board.ClickResult.MOVED){
+                    networkService.sendGameMessage(new Message(Message.MOVE,
+                            prevPosition.toString(), position.toString()));
+                }
+
+                return true;
+            }
+        };
     }
 
     @Override
     public void undoMove(View view)
     {
         super.undoMove(view);
-        if(board.getCurrentPlayer() != localPlayer){
-            boardView.setHints(null);
-            boardView.postInvalidate();
-        }
         networkService.sendGameMessage(new Message(Message.UNDO_MOVE));
     }
 }

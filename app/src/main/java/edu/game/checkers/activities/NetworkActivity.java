@@ -7,10 +7,8 @@ import android.content.Intent;
 import android.content.ServiceConnection;
 import android.content.SharedPreferences;
 import android.os.Bundle;
-import android.os.Handler;
 import android.os.IBinder;
 import android.support.v7.app.AppCompatActivity;
-import android.util.Log;
 import android.view.View;
 import android.view.WindowManager;
 import android.widget.ArrayAdapter;
@@ -250,7 +248,7 @@ public class NetworkActivity extends AppCompatActivity {
         @Override
         public void onConnectionError(String error) {
             if(active)
-                new AlertDialog(NetworkActivity.this).createErrorDialog(error);
+                new AlertDialog(NetworkActivity.this).createExitDialog("Error", error);
         }
     }
 

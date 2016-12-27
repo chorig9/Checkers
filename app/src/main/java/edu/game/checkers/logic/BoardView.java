@@ -4,6 +4,8 @@ import android.content.Context;
 import android.graphics.Canvas;
 import android.graphics.Color;
 import android.graphics.Paint;
+import android.graphics.drawable.GradientDrawable;
+import android.view.MotionEvent;
 import android.view.View;
 
 import java.util.List;
@@ -12,21 +14,30 @@ public class BoardView extends View {
 
     private List<Position> hints;
     private Piece[][] pieces;
+    private boolean rotation = false;
 
-    public BoardView(Context context, Piece[][] pieces)
-    {
+    public BoardView(Context context) {
         super(context);
-        this.pieces = pieces;
     }
 
-    public void setPieces(Piece[][] pieces)
-    {
+    public void rotate(){
+        rotation = !rotation;
+    }
+
+    public boolean getBoardRotation(){
+        return rotation;
+    }
+
+    public void setPieces(Piece[][] pieces) {
         this.pieces = pieces;
     }
 
     @Override
     public void onDraw(Canvas canvas) {
         super.onDraw(canvas);
+
+        if(rotation)
+            canvas.rotate(180, canvas.getWidth() / 2, canvas.getHeight() / 2);
 
         drawBoard(canvas);
 
@@ -58,9 +69,9 @@ public class BoardView extends View {
                 else
                     paint.setColor(Color.parseColor("#D8EBFF"));
 
-
                 canvas.drawRect(x * tileSize, y * tileSize,
                         (x+1) * tileSize, (y+1) * tileSize, paint);
+
             }
         }
     }
