@@ -15,9 +15,11 @@ public class BoardView extends View {
     private List<Position> hints;
     private Piece[][] pieces;
     private boolean rotation = false;
+    private Paint paint;
 
     public BoardView(Context context) {
         super(context);
+        paint = new Paint();
     }
 
     public void rotate(){
@@ -57,8 +59,6 @@ public class BoardView extends View {
     // Method to draw an empty chess board
     public void drawBoard(Canvas canvas)
     {
-        Paint paint = new Paint();
-
         int tileSize = canvas.getWidth() / 8;
 
         for(int x = 0; x < 8; x++){
@@ -82,7 +82,6 @@ public class BoardView extends View {
         if(hints == null)
             return;
 
-        Paint paint = new Paint();
         int tileSize = canvas.getWidth() / 8;
 
         paint.setColor(Color.GREEN);

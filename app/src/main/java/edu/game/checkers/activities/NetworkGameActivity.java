@@ -4,6 +4,7 @@ import android.content.ComponentName;
 import android.content.Context;
 import android.content.Intent;
 import android.content.ServiceConnection;
+import android.graphics.Color;
 import android.os.Bundle;
 import android.os.IBinder;
 import android.view.MotionEvent;
@@ -39,10 +40,10 @@ public class NetworkGameActivity extends GameActivity {
         initGame();
 
         Bundle bundle = getIntent().getExtras();
-        String otherName = getString(R.string.opponent) + bundle.getString("NAME");
 
-        TextView title = (TextView) findViewById(R.id.title_text);
-        title.setText(otherName);
+        TextView title = (TextView) findViewById(R.id.name_header);
+        String header = getString(R.string.name_header) + bundle.getString("NAME");
+        title.setText(header);
     }
 
     @Override
@@ -149,6 +150,9 @@ public class NetworkGameActivity extends GameActivity {
                     networkService.sendGameMessage(new Message(Message.MOVE,
                             prevPosition.toString(), position.toString()));
                 }
+
+                turnView.setColor(board.getCurrentPlayer() == Board.Player.WHITE ?
+                        Color.WHITE : Color.BLACK);
 
                 return true;
             }

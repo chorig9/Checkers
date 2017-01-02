@@ -14,5 +14,6 @@
     <string name="enter_name">Enter username</string>
     <string name="send_name">Connect</string>
     <string name="undo_move">Undo</string>
-    <string name="opponent">"Opponent: "</string>
+    <string name="name_header">"Player: "</string>
+    <string name="turn">turn:</string>
 </resources>

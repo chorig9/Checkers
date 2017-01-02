@@ -1,6 +1,9 @@
 package edu.game.checkers.activities;
 
 import android.os.Bundle;
+import android.widget.TextView;
+
+import edu.board.checkers.R;
 
 public class LocalGameActivity extends GameActivity{
 
@@ -9,5 +12,8 @@ public class LocalGameActivity extends GameActivity{
         super.onCreate(savedInstanceState);
 
         initGame();
+        TextView title = (TextView) findViewById(R.id.name_header);
+        String header = getString(R.string.name_header) + "local";
+        title.setText(header);
     }
 }
