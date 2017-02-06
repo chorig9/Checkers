@@ -5,15 +5,14 @@ import android.content.Intent;
 import android.os.AsyncTask;
 import android.os.Binder;
 import android.os.IBinder;
-import android.util.Log;
+import android.support.v4.util.Pair;
 
-import java.io.BufferedReader;
+import org.jivesoftware.smack.PresenceListener;
+import org.jivesoftware.smack.packet.Presence;
+import org.jivesoftware.smack.roster.RosterListener;
+
 import java.io.IOException;
-import java.io.InputStream;
-import java.io.InputStreamReader;
-import java.io.OutputStream;
-import java.io.PrintWriter;
-import java.net.Socket;
+import java.util.Collection;
 import java.util.Queue;
 import java.util.concurrent.ArrayBlockingQueue;
 import java.util.logging.Level;
@@ -24,97 +23,86 @@ public class NetworkService extends Service {
 
     private final IBinder binder = new NetworkBinder();
 
-    private final static int PORT = 8189;
-    private final static String HOST = "89.40.127.125";
-
     // in ms
     public final static int SERVER_TIMEOUT = 1000;
     public final static int USER_TIMEOUT = 10000;
     private final static int QUEUE_CAPACITY = 10;
 
-    private BufferedReader in;
-    private PrintWriter out;
-    private Socket socket;
     private volatile boolean connected = false;
 
     private volatile boolean inGame = false;
     private GameController gameController;
+    private XMPPHandler xmppHandler;
 
     private Queue<Message> responseQueue = new ArrayBlockingQueue<>(QUEUE_CAPACITY);
 
-    public void connectToServer(ServerRequestHandler callback)
+    public void connectToServer(ConnectionCallback callback)
     {
-        new ConnectToServerTask(callback).execute();
+        new ConnectToServerTask(callback).execute("android_test", "test");
     }
 
-    public void startMainThread(final ServerRequestHandler callback)
+    public void startMainThread(final ConnectionCallback callback)
     {
-        Thread thread = new Thread(new Runnable() {
-            @Override
-            public void run() {
-                try{
-                    while(connected){
-                        // blocking
-                        String str = in.readLine();
-
-                        if(str == null){
-                            new EndConnectionTask().execute();
-                            return;
-                        }
-
-                        Message msg = new Message(str);
-
-                        switch (msg.getType()){
-                            case Message.REQUEST:
-                                new HandleRequestTask(callback).execute(msg);
-                                break;
-                            case Message.RESPONSE:
-                                responseQueue.add(msg);
-                                break;
-                            case Message.GAME:
-                                if(inGame)
-                                    new HandleGameTask(gameController).execute(msg);
-                                break;
-                        }
-                    }
-                }
-                catch (IOException e){
-                    new HandleErrorTask(callback).execute(e.getMessage());
-                }
-            }
-        });
-
-        thread.start();
+//        Thread thread = new Thread(new Runnable() {
+//            @Override
+//            public void run() {
+//                try{
+//                    while(connected){
+//                        // blocking
+//                        String str = in.readLine();
+//
+//                        if(str == null){
+//                            new EndConnectionTask().execute();
+//                            return;
+//                        }
+//
+//                        Message msg = new Message(str);
+//
+//                        switch (msg.getType()){
+//                            case Message.REQUEST:
+//                                new HandleRequestTask(callback).execute(msg);
+//                                break;
+//                            case Message.RESPONSE:
+//                                responseQueue.add(msg);
+//                                break;
+//                            case Message.GAME:
+//                                if(inGame)
+//                                    new HandleGameTask(gameController).execute(msg);
+//                                break;
+//                        }
+//                    }
+//                }
+//                catch (IOException e){
+//                    new HandleErrorTask(callback).execute(e.getMessage());
+//                }
+//            }
+//        });
+//
+//        thread.start();
     }
 
-    public void makeRequest(final Message msg, int timeout, final ServerResponseHandler callback)
-    {
+    public void sendRequest(final Message msg, int timeout, final ServerResponseHandler callback) {
         msg.addPrefix(Message.REQUEST);
         new MakeRequestTask(callback, timeout).execute(msg);
     }
 
-    public void sendRequest(final Message msg)
-    {
-        msg.addPrefix(Message.REQUEST);
-        new MakeRequestTask(null, 0).execute(msg);
-    }
-
-    public void sendResponse(final Message msg)
-    {
+    public void sendResponse(final Message msg) {
         msg.addPrefix(Message.RESPONSE);
         new SendMessageTask().execute(msg);
     }
 
-    public void sendGameMessage(final Message msg)
-    {
+    public void sendGameMessage(final Message msg) {
         msg.addPrefix(Message.GAME);
         new SendMessageTask().execute(msg);
     }
 
-    public void startGame(GameController controller)
-    {
+    public void startGame(GameController controller) {
         this.gameController = controller;
         inGame = true;
+    }
+
+    public Collection<Friend> getFriendsList() {
+        return xmppHandler.getRosterEntries();
     }
 
     @Override
@@ -149,21 +137,21 @@ public class NetworkService extends Service {
         @Override
         protected Void doInBackground(Message... msg) {
             // send request
-            out.println(msg[0].toString());
-            out.flush();
-
-            if(callback != null) {
-                // wait for response
-                long startTime = System.currentTimeMillis();
-                while(System.currentTimeMillis() - startTime < timeout
-                        && responseQueue.isEmpty()){
-                }
-
-                if(!responseQueue.isEmpty())
-                    response = responseQueue.poll();
-                else
-                    response = new Message(Message.TIMEOUT, "timeout");
-            }
+//            out.println(msg[0].toString());
+//            out.flush();
+//
+//            if(callback != null) {
+//                // wait for response
+//                long startTime = System.currentTimeMillis();
+//                while(System.currentTimeMillis() - startTime < timeout
+//                        && responseQueue.isEmpty()){
+//                }
+//
+//                if(!responseQueue.isEmpty())
+//                    response = responseQueue.poll();
+//                else
+//                    response = new Message(Message.TIMEOUT, "timeout");
+//            }
 
             return null;
         }
@@ -179,33 +167,41 @@ public class NetworkService extends Service {
     {
         @Override
         protected Void doInBackground(Message... msg) {
-            out.println(msg[0].toString());
-            out.flush();
+            //TODO
             return null;
         }
     }
 
-    private class ConnectToServerTask extends AsyncTask<Void, Void, Void> {
+    /*
+    * params - {username, password}
+     */
+    private class ConnectToServerTask extends AsyncTask<String, Void, Void> {
 
-        ServerRequestHandler callback;
+        XMPPHandler handler;
+        ConnectionCallback callback;
         Exception exception = null;
 
-        public ConnectToServerTask(ServerRequestHandler callback){
+        public ConnectToServerTask(ConnectionCallback callback){
             this.callback = callback;
         }
 
         @Override
-        protected Void doInBackground(Void... params) {
-            try{
-                socket = new Socket(HOST, PORT);
+        protected Void doInBackground(String... params){
+            try {
+                handler = new XMPPHandler(params[0], params[1]);
+                handler.setPresenceListener(new RosterListener() {
 
-                InputStream inStream = socket.getInputStream();
-                OutputStream outStream = socket.getOutputStream();
+                    public void entriesAdded(Collection<String> addresses) {}
+                    public void entriesUpdated(Collection<String> addresses) {}
+                    public void entriesDeleted(Collection<String> addresses) {}
 
-                in = new BufferedReader(new InputStreamReader(inStream));
-                out = new PrintWriter(outStream, true);
-            }
-            catch(IOException e){
+                    @Override
+                    public void presenceChanged(Presence presence) {
+                        String jid = XMPPHandler.parseFrom(presence.getFrom());
+                        callback.onPresenceChanged(jid, presence.getType().name());
+                    }
+                });
+            } catch (Exception e) {
                 exception = e;
             }
 
@@ -217,8 +213,11 @@ public class NetworkService extends Service {
             if(exception != null)
                 callback.onConnectionError(exception.getMessage());
             else {
+                xmppHandler = handler;
                 connected = true;
                 startMainThread(callback);
+
+                callback.onSuccess();
             }
         }
     }
@@ -243,13 +242,8 @@ public class NetworkService extends Service {
         @Override
         protected Void doInBackground(Void... params) {
             try {
-                if(in != null) {
-                    Message msg = new Message(Message.EXIT_SERVER);
-                    msg.addPrefix(Message.REQUEST);
-                    out.println(msg.toString());
-                    out.flush();
-                    socket.close();
-                }
+                //TODO
+                throw new IOException();
             }
             catch(IOException e) {
                 Logger.getAnonymousLogger().log(Level.FINE, "closing socket error");
@@ -258,7 +252,6 @@ public class NetworkService extends Service {
         }
     }
 
-    // to avoid changing view from wrong thread exception (maybe not most elegant, but works)
     private class HandleRequestTask extends AsyncTask<Message, Void, Void>{
 
         ServerRequestHandler callback;

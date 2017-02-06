@@ -67,7 +67,7 @@ public class NetworkGameActivity extends GameActivity {
     }
 
     private void endGame() {
-        networkService.sendRequest(new Message(Message.EXIT_GAME));
+        //networkService.sendRequest(new Message(Message.EXIT_GAME));
     }
 
     /** Defines callbacks for service binding, passed to bindService() */

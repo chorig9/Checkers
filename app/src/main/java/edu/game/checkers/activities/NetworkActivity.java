@@ -2,21 +2,28 @@ package edu.game.checkers.activities;
 
 import android.content.ComponentName;
 import android.content.Context;
-import android.content.DialogInterface;
 import android.content.Intent;
 import android.content.ServiceConnection;
 import android.content.SharedPreferences;
 import android.os.Bundle;
 import android.os.IBinder;
 import android.support.v7.app.AppCompatActivity;
+import android.text.Editable;
+import android.text.TextWatcher;
+import android.view.LayoutInflater;
+import android.view.MotionEvent;
 import android.view.View;
+import android.view.ViewGroup;
 import android.view.WindowManager;
 import android.widget.ArrayAdapter;
+import android.widget.Button;
 import android.widget.EditText;
+import android.widget.LinearLayout;
 import android.widget.ListView;
 import android.widget.TextView;
 
 import java.util.ArrayList;
+import java.util.Collection;
 
 import edu.board.checkers.R;
 
@@ -27,8 +34,9 @@ public class NetworkActivity extends AppCompatActivity {
     private NetworkService networkService;
     private boolean bound = false;
 
-    private ArrayList<String> list = new ArrayList<>();
-    private ArrayAdapter<String> adapter;
+    private ArrayList<Friend> currentFriendsList = new ArrayList<>();
+    private ArrayList<Friend> friendsList = new ArrayList<>();
+    private ArrayAdapter<Friend> adapter;
     private ListView listView;
 
     private volatile boolean active = false;
@@ -72,8 +80,6 @@ public class NetworkActivity extends AppCompatActivity {
             NetworkService.NetworkBinder binder = (NetworkService.NetworkBinder) service;
             networkService = binder.getService();
             bound = true;
-
-            networkService.connectToServer(new ServerRequestHandlerAdapter());
         }
 
         @Override
@@ -108,14 +114,37 @@ public class NetworkActivity extends AppCompatActivity {
                 MODE_PRIVATE);
         int options = optPreferences.getInt(OptionsActivity.OPTIONS_KEY, 0);
 
-        networkService.makeRequest(new Message(Message.HI, name, Integer.toString(options)),
-                NetworkService.SERVER_TIMEOUT , new ServerResponseHandler() {
+        networkService.connectToServer(new ConnectionCallback() {
             @Override
-            public void onServerResponse(final Message response) {
-                if(response.getCode().equals(Message.OK))
-                    displayPlayersList();
-                else
-                    new AlertDialog(NetworkActivity.this).createInfoDialog(response.getArguments().get(0));
+            public void onConnectionError(String error) {
+                new AlertDialog(NetworkActivity.this).createExitDialog("Error", error);
+            }
+
+            @Override
+            public void onSuccess() {
+                displayPlayersList();
+            }
+
+            @Override
+            public void onPresenceChanged(String username, String presence){
+                Friend friend = null;
+                for(Friend element : friendsList){
+                    if(element.username.equals(username))
+                        friend = element;
+                }
+
+                if(friend != null){
+                    friend.status = presence;
+
+                    if(currentFriendsList.contains(friend)) {
+                        listView.post(new Runnable() {
+                            @Override
+                            public void run() {
+                                adapter.notifyDataSetChanged();
+                            }
+                        });
+                    }
+                }
             }
         });
     }
@@ -125,131 +154,197 @@ public class NetworkActivity extends AppCompatActivity {
         setContentView(R.layout.activity_network_list);
 
         listView = (ListView) findViewById(R.id.players_list);
-        adapter = new ArrayAdapter<>(this, R.layout.player_list_element, list);
+        adapter = new FriendListAdapter(this, R.layout.player_list_element, currentFriendsList);
 
         listView.setAdapter(adapter);
 
-        networkService.makeRequest(new Message(Message.GET_PLAYERS),
-                NetworkService.SERVER_TIMEOUT, new ServerResponseHandler() {
-                    @Override
-                    public void onServerResponse(final Message response) {
-                        if(response.getCode().equals(Message.GET_PLAYERS)){
-                            list.clear();
-                            if(!response.getArguments().isEmpty())
-                                list.addAll(response.getArguments());
-                            adapter.notifyDataSetChanged();
-                        }
-                    }
-                });
+        Collection<Friend> friends = networkService.getFriendsList();
+        friendsList.addAll(friends);
+        currentFriendsList.addAll(friends);
+
+        EditText text = (EditText) findViewById(R.id.search);
+        text.addTextChangedListener(new TextWatcher() {
+
+            public void beforeTextChanged(CharSequence s, int start, int count, int after) {}
+            public void afterTextChanged(Editable s) {}
+
+            @Override
+            public void onTextChanged(CharSequence s, int start, int before, int count) {
+                showUsers(findViewById(R.id.network_list));
+            }
+        });
+
+        adapter.notifyDataSetChanged();
     }
 
     public void invitePlayer(View view) {
-        TextView textView = (TextView) view;
-        final String[] player = textView.getText().toString().split(Message.EXTRA_SEPARATOR);
-        final String name = player[0];
-        final int options = Integer.decode(player[1]);
-
-        final SharedPreferences optPreferences = getSharedPreferences(OptionsActivity.OPTIONS_FILE,
-                MODE_PRIVATE);
-        int myOptions = optPreferences.getInt(OptionsActivity.OPTIONS_KEY, 0);
-
-        if(options != myOptions){
-            new AlertDialog(this)
-                    .createQuestionDialog("If you continue your options will be temporarily changed, proceed?",
-                            new DialogInterface.OnClickListener() { // yes
-                                @Override
-                                public void onClick(DialogInterface dialog, int which) {
-                                    initializeGame(name, options);
-                                }
-                            }, new DialogInterface.OnClickListener() { // no
-                                @Override
-                                public void onClick(DialogInterface dialog, int which) {
-                                    // nothing
-                                }
-                            });
-        }
-        else{
-            initializeGame(name, options);
-        }
+//        TextView textView = (TextView) view;
+//        final String[] player = textView.getText().toString().split(Message.EXTRA_SEPARATOR);
+//        final String name = player[0];
+//        final int options = Integer.decode(player[1]);
+//
+//        final SharedPreferences optPreferences = getSharedPreferences(OptionsActivity.OPTIONS_FILE,
+//                MODE_PRIVATE);
+//        int myOptions = optPreferences.getInt(OptionsActivity.OPTIONS_KEY, 0);
+//
+//        if(options != myOptions){
+//            new AlertDialog(this)
+//                    .createQuestionDialog("If you continue your options will be temporarily changed, proceed?",
+//                            new DialogInterface.OnClickListener() { // yes
+//                                @Override
+//                                public void onClick(DialogInterface dialog, int which) {
+//                                    initializeGame(name, options);
+//                                }
+//                            }, new DialogInterface.OnClickListener() { // no
+//                                @Override
+//                                public void onClick(DialogInterface dialog, int which) {
+//                                    // nothing
+//                                }
+//                            });
+//        }
+//        else{
+//            initializeGame(name, options);
+//        }
     }
 
     private void initializeGame(final String name, final int options) {
-        networkService.makeRequest(new Message(Message.INVITE, name),
-                NetworkService.USER_TIMEOUT, new ServerResponseHandler() {
-                    @Override
-                    public void onServerResponse(final Message response) {
-                        if(response.getCode().equals(Message.OK)){
-                            startGame(name, options);
-                        }
-                        else if(response.getCode().equals(Message.NO)){
-                            new AlertDialog(NetworkActivity.this).
-                                    createInfoDialog("Player rejected your invite");
-                        }
-                        else{
-                            new AlertDialog(NetworkActivity.this).
-                                    createInfoDialog(response.getArguments().get(0));
-                        }
-                    }});
+//        networkService.sendRequest(new Message(Message.INVITE, name),
+//                NetworkService.USER_TIMEOUT, new ServerResponseHandler() {
+//                    @Override
+//                    public void onServerResponse(final Message response) {
+//                        if(response.getCode().equals(Message.OK)){
+//                            startGame(name, options);
+//                        }
+//                        else if(response.getCode().equals(Message.NO)){
+//                            new AlertDialog(NetworkActivity.this).
+//                                    createInfoDialog("Player rejected your invite");
+//                        }
+//                        else{
+//                            new AlertDialog(NetworkActivity.this).
+//                                    createInfoDialog(response.getArguments().get(0));
+//                        }
+//                    }});
     }
 
     private void startGame(final String name, final int options){
-        networkService.makeRequest(new Message(Message.START_GAME), NetworkService.USER_TIMEOUT,
-                new ServerResponseHandler(){
-            @Override
-            public void onServerResponse(Message response) {
-                Intent intent = new Intent(NetworkActivity.this, NetworkGameActivity.class);
-                intent.putExtra("NAME", name);
-                intent.putExtra("options", options);
-                startActivity(intent);
-            }
-        });
+//        networkService.sendRequest(new Message(Message.START_GAME), NetworkService.USER_TIMEOUT,
+//                new ServerResponseHandler(){
+//            @Override
+//            public void onServerResponse(Message response) {
+//                Intent intent = new Intent(NetworkActivity.this, NetworkGameActivity.class);
+//                intent.putExtra("NAME", name);
+//                intent.putExtra("options", options);
+//                startActivity(intent);
+//            }
+//        });
     }
 
-    //responsible for handling server requests and connection errors
-    private class ServerRequestHandlerAdapter implements ServerRequestHandler {
+    public void showUsers(View view){
+        currentFriendsList.clear();
+        EditText search = (EditText) findViewById(R.id.search);
 
-        @Override
-        public void onServerRequest(final Message msg) {
-            if(active) {
-                switch (msg.getCode()) {
-                    case Message.INVITE:
-                        new AlertDialog(NetworkActivity.this).createQuestionDialog(
-                                msg.getArguments().get(0) + " invited you, accept?",
-                                new DialogInterface.OnClickListener() { // 'ok' button
-                                    @Override
-                                    public void onClick(DialogInterface dialog, int which) {
-                                        networkService.sendResponse(new Message(Message.OK));
-                                        SharedPreferences optPreferences = getSharedPreferences(OptionsActivity.OPTIONS_FILE,
-                                                MODE_PRIVATE);
-                                        int options = optPreferences.getInt(OptionsActivity.OPTIONS_KEY, 0);
-                                        startGame(msg.getArguments().get(0), options);
-                                        dialog.dismiss();
-                                    }
-                                },
-                                new DialogInterface.OnClickListener() { // 'no' button
-                                    @Override
-                                    public void onClick(DialogInterface dialog, int which) {
-                                        networkService.sendResponse(new Message(Message.NO));
-                                        dialog.dismiss();
-                                    }
-                                });
-                        break;
-                    case Message.UPDATE_PLAYERS:
-                        if (msg.getArguments().get(0).equals("-"))   // delete player from list
-                            list.remove(msg.getArguments().get(1));
-                        else
-                            list.add(msg.getArguments().get(1));    // add player to list
-                        adapter.notifyDataSetChanged();
-                        break;
+        for(Friend friend : friendsList){
+            if(friend.username.contains(search.getText().toString()))
+                currentFriendsList.add(friend);
+        }
+
+        LinearLayout inviteLayout = (LinearLayout) findViewById(R.id.invite_space);
+        if(currentFriendsList.size() != 0){
+            adapter.notifyDataSetChanged();
+
+            if(inviteLayout.getChildCount() != 0)
+                inviteLayout.removeAllViews();
+        }
+        else{
+            inviteLayout.removeAllViews();
+
+            Button button = new Button(this);
+            button.setText("Invite");
+            button.setOnTouchListener(new View.OnTouchListener() {
+                @Override
+                public boolean onTouch(View v, MotionEvent event) {
+                    return false;
                 }
-            }
+            });
+
+            TextView text = new TextView(this);
+            text.setText("User: " + search.getText().toString() + "\n" + "is not on your list");
+
+            inviteLayout.addView(text);
+            inviteLayout.addView(button);
+        }
+    }
+
+    private class FriendListAdapter extends ArrayAdapter<Friend> {
+
+        public FriendListAdapter(Context context, int resource, ArrayList<Friend> list) {
+            super(context, 0, list);
         }
 
         @Override
-        public void onConnectionError(String error) {
-            if(active)
-                new AlertDialog(NetworkActivity.this).createExitDialog("Error", error);
+        public View getView(int position, View convertView, ViewGroup parent) {
+            // Get the data item for this position
+            Friend friend = getItem(position);
+            // Check if an existing view is being reused, otherwise inflate the view
+            if (convertView == null) {
+                convertView = LayoutInflater.from(getContext())
+                        .inflate(R.layout.player_list_element, parent, false);
+            }
+            TextView name = (TextView) convertView.findViewById(R.id.friend_name);
+            TextView status = (TextView) convertView.findViewById(R.id.friend_status);
+            name.setText(friend.username);
+            status.setText(friend.status);
+
+            return convertView;
         }
+
     }
+
+//    //responsible for handling server requests and connection errors
+//    private class ServerRequestHandlerAdapter implements ServerRequestHandler {
+//
+//        @Override
+//        public void onServerRequest(final Message msg) {
+//            if(active) {
+//                switch (msg.getCode()) {
+//                    case Message.INVITE:
+//                        new AlertDialog(NetworkActivity.this).createQuestionDialog(
+//                                msg.getArguments().get(0) + " invited you, accept?",
+//                                new DialogInterface.OnClickListener() { // 'ok' button
+//                                    @Override
+//                                    public void onClick(DialogInterface dialog, int which) {
+//                                        networkService.sendResponse(new Message(Message.OK));
+//                                        SharedPreferences optPreferences = getSharedPreferences(OptionsActivity.OPTIONS_FILE,
+//                                                MODE_PRIVATE);
+//                                        int options = optPreferences.getInt(OptionsActivity.OPTIONS_KEY, 0);
+//                                        startGame(msg.getArguments().get(0), options);
+//                                        dialog.dismiss();
+//                                    }
+//                                },
+//                                new DialogInterface.OnClickListener() { // 'no' button
+//                                    @Override
+//                                    public void onClick(DialogInterface dialog, int which) {
+//                                        networkService.sendResponse(new Message(Message.NO));
+//                                        dialog.dismiss();
+//                                    }
+//                                });
+//                        break;
+//                    case Message.UPDATE_PLAYERS:
+//                        if (msg.getArguments().get(0).equals("-"))   // delete player from list
+//                            list.remove(msg.getArguments().get(1));
+//                        else
+//                            list.add(msg.getArguments().get(1));    // add player to list
+//                        adapter.notifyDataSetChanged();
+//                        break;
+//                }
+//            }
+//        }
+//
+//        @Override
+//        public void onConnectionError(String error) {
+//            if(active)
+//                new AlertDialog(NetworkActivity.this).createExitDialog("Error", error);
+//        }
+//    }
 
 }

@@ -16,4 +16,6 @@
     <string name="undo_move">Undo</string>
     <string name="name_header">"Player: "</string>
     <string name="turn">turn:</string>
+    <string name="search">search</string>
+    <string name="enter_username">Enter username</string>
 </resources>

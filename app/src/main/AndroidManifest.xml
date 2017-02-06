@@ -36,6 +36,7 @@
             android:screenOrientation="portrait" />
 
         <activity android:name="edu.game.checkers.activities.NetworkActivity"
+            android:windowSoftInputMode="adjustResize"
             android:screenOrientation="portrait" />
 
         <service android:name="edu.game.checkers.activities.NetworkService" />
