@@ -290,6 +290,7 @@ public class NetworkActivity extends AppCompatActivity {
                 inviteLayout.removeAllViews();
 
             adapter.notifyDataSetChanged();
+            view.postInvalidate();
         }
         else{
             inviteLayout.removeAllViews();

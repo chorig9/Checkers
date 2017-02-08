@@ -443,7 +443,7 @@ public class NetworkService extends Service {
                                     }
                                 }
 
-                                if (roster.getEntry(parseFrom(packet.getFrom())) == null) {
+                                if (roster.getEntry(packet.getFrom()) == null) {
                                     Presence subscribe = new Presence(Presence.Type.subscribe);
                                     subscribe.setTo(packet.getFrom());
                                     conn.sendStanza(subscribe);
@@ -455,7 +455,14 @@ public class NetworkService extends Service {
                 conn.addAsyncStanzaListener(new StanzaListener() {
                     @Override
                     public void processPacket(Stanza packet) throws SmackException.NotConnectedException {
-                        RosterEntry entry = roster.getEntry(parseFrom(packet.getFrom()));
+                        if (!roster.isLoaded()) {
+                            try {
+                                roster.reloadAndWait();
+                            } catch (Exception e) {
+                                callback.onConnectionError(e.getMessage());
+                            }
+                        }
+                        RosterEntry entry = roster.getEntry(packet.getFrom());
                         if(entry != null) {
                             try {
                                 roster.removeEntry(entry);
