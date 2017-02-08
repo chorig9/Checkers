@@ -3,7 +3,9 @@
     android:layout_height="match_parent"
     android:layout_width="match_parent"
     android:orientation="horizontal"
-    android:onClick="invitePlayer">
+    android:onClick="invitePlayer"
+    android:longClickable="true"
+    >
     <TextView
         android:id="@+id/friend_name"
         android:layout_width="wrap_content"

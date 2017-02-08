@@ -2,19 +2,25 @@ package edu.game.checkers.activities;
 
 import android.content.ComponentName;
 import android.content.Context;
+import android.content.DialogInterface;
 import android.content.Intent;
 import android.content.ServiceConnection;
 import android.content.SharedPreferences;
+import android.graphics.Color;
 import android.os.Bundle;
 import android.os.IBinder;
+import android.support.annotation.NonNull;
 import android.support.v7.app.AppCompatActivity;
 import android.text.Editable;
 import android.text.TextWatcher;
+import android.util.TypedValue;
+import android.view.Gravity;
 import android.view.LayoutInflater;
 import android.view.MotionEvent;
 import android.view.View;
 import android.view.ViewGroup;
 import android.view.WindowManager;
+import android.widget.AdapterView;
 import android.widget.ArrayAdapter;
 import android.widget.Button;
 import android.widget.EditText;
@@ -122,9 +128,14 @@ public class NetworkActivity extends AppCompatActivity {
 
             @Override
             public void onSuccess() {
-                displayPlayersList();
+                initList();
             }
+        });
+    }
 
+    private void initList() {
+
+        networkService.setPresenceListener(new PresenceCallback() {
             @Override
             public void onPresenceChanged(String username, String presence){
                 Friend friend = null;
@@ -147,9 +158,15 @@ public class NetworkActivity extends AppCompatActivity {
                 }
             }
         });
-    }
 
-    private void displayPlayersList() {
+        networkService.setSubscriptionListener(new SubscriptionListener() {
+            @Override
+            public void onSubscribtionChange() {
+                friendsList.clear();
+                friendsList.addAll(networkService.getFriendsList());
+                showUsers(findViewById(R.id.players_list));
+            }
+        });
 
         setContentView(R.layout.activity_network_list);
 
@@ -158,9 +175,8 @@ public class NetworkActivity extends AppCompatActivity {
 
         listView.setAdapter(adapter);
 
-        Collection<Friend> friends = networkService.getFriendsList();
-        friendsList.addAll(friends);
-        currentFriendsList.addAll(friends);
+        friendsList.addAll(networkService.getFriendsList());
+        currentFriendsList.addAll(friendsList);
 
         EditText text = (EditText) findViewById(R.id.search);
         text.addTextChangedListener(new TextWatcher() {
@@ -171,6 +187,26 @@ public class NetworkActivity extends AppCompatActivity {
             @Override
             public void onTextChanged(CharSequence s, int start, int before, int count) {
                 showUsers(findViewById(R.id.network_list));
+            }
+        });
+
+        listView.setOnItemLongClickListener(new AdapterView.OnItemLongClickListener() {
+            @Override
+            public boolean onItemLongClick(AdapterView<?> parent, final View view,
+                                           final int position, long id) {
+
+                new AlertDialog(NetworkActivity.this).
+                        createQuestionDialog(friendsList.get(position).username, "Remove from list?",
+                        new DialogInterface.OnClickListener() {
+                            @Override
+                            public void onClick(DialogInterface dialog, int which) {
+                                networkService.unsubscribeUser(friendsList.get(position).username);
+                                friendsList.remove(position);
+                                showUsers(view);
+                            }
+                        });
+
+                return true;
             }
         });
 
@@ -239,9 +275,9 @@ public class NetworkActivity extends AppCompatActivity {
 //        });
     }
 
-    public void showUsers(View view){
+    public void showUsers(final View view){
         currentFriendsList.clear();
-        EditText search = (EditText) findViewById(R.id.search);
+        final EditText search = (EditText) findViewById(R.id.search);
 
         for(Friend friend : friendsList){
             if(friend.username.contains(search.getText().toString()))
@@ -250,27 +286,40 @@ public class NetworkActivity extends AppCompatActivity {
 
         LinearLayout inviteLayout = (LinearLayout) findViewById(R.id.invite_space);
         if(currentFriendsList.size() != 0){
-            adapter.notifyDataSetChanged();
-
             if(inviteLayout.getChildCount() != 0)
                 inviteLayout.removeAllViews();
+
+            adapter.notifyDataSetChanged();
         }
         else{
             inviteLayout.removeAllViews();
 
             Button button = new Button(this);
-            button.setText("Invite");
-            button.setOnTouchListener(new View.OnTouchListener() {
+            String text = "Click to invite";
+            button.setGravity(Gravity.CENTER);
+            button.setText(text);
+            button.setTextSize(TypedValue.COMPLEX_UNIT_SP, 23);
+            button.setOnClickListener(new View.OnClickListener() {
                 @Override
-                public boolean onTouch(View v, MotionEvent event) {
-                    return false;
+                public void onClick(View v) {
+                    final Friend friend = new Friend(search.getText().toString(), "unknown");
+                    friend.accepted = false;
+                    friendsList.add(friend);
+
+                    networkService.inviteUser(search.getText().toString(), new InviteCallback() {
+                        @Override
+                        public void onInvitedResponse(boolean accepted) {
+                            if(accepted)
+                                friend.accepted = true;
+                            else
+                                friendsList.remove(friend);
+                            showUsers(view);
+                        }
+                    });
+                    showUsers(view);
                 }
             });
 
-            TextView text = new TextView(this);
-            text.setText("User: " + search.getText().toString() + "\n" + "is not on your list");
-
-            inviteLayout.addView(text);
             inviteLayout.addView(button);
         }
     }
@@ -282,9 +331,10 @@ public class NetworkActivity extends AppCompatActivity {
         }
 
         @Override
-        public View getView(int position, View convertView, ViewGroup parent) {
+        public View getView(int position, View convertView, @NonNull ViewGroup parent) {
             // Get the data item for this position
             Friend friend = getItem(position);
+
             // Check if an existing view is being reused, otherwise inflate the view
             if (convertView == null) {
                 convertView = LayoutInflater.from(getContext())
@@ -292,8 +342,20 @@ public class NetworkActivity extends AppCompatActivity {
             }
             TextView name = (TextView) convertView.findViewById(R.id.friend_name);
             TextView status = (TextView) convertView.findViewById(R.id.friend_status);
+
+            if(friend == null)
+                return convertView;
+
             name.setText(friend.username);
             status.setText(friend.status);
+            if(!friend.accepted){
+                name.setTextColor(Color.GRAY);
+                status.setTextColor(Color.GRAY);
+            }
+            else {
+                name.setTextColor(Color.BLACK);
+                status.setTextColor(Color.BLACK);
+            }
 
             return convertView;
         }
