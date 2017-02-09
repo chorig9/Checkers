@@ -51,6 +51,8 @@ public class NetworkService extends Service {
     private ConnectionCallback connectionCallback;
     private ConnectionCreatedCallback connectionCreatedCallback;
 
+    private CommunicationManager communicationManager;
+
     @Override
     public void onDestroy() {
         connected = false;
@@ -111,6 +113,14 @@ public class NetworkService extends Service {
         }
     }
 
+    public void saveCommunicationManager(CommunicationManager manager){
+        this.communicationManager = manager;
+    }
+
+    public CommunicationManager getCommunicationManager(){
+        return communicationManager;
+    }
+
     public Collection<Friend> getFriendsList() {
         try{
             // reload list
@@ -120,7 +130,7 @@ public class NetworkService extends Service {
             Collection<Friend> users = new ArrayList<>();
             for(RosterEntry entry : entries){
                 Presence presence = xmpp.roster.getPresence(entry.getUser());
-                Friend friend = new Friend(entry.getUser(), presence.getType().name());
+                Friend friend = new Friend(entry.getUser(), presence.getType().name(), presence.getStatus());
                 friend.accepted = xmpp.roster.isSubscribedToMyPresence(entry.getUser());
 
                 users.add(friend);

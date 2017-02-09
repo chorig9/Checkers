@@ -6,6 +6,7 @@ import android.graphics.Canvas;
 import android.graphics.Color;
 import android.graphics.Paint;
 import android.os.Bundle;
+import android.os.Handler;
 import android.support.v7.app.AppCompatActivity;
 import android.view.MotionEvent;
 import android.view.View;
@@ -73,10 +74,10 @@ public class GameActivity extends AppCompatActivity {
         return new TouchManager();
     }
 
-//    private void gameOver()
-//    {
-//        new PostAlertDialog(this).createExitDialog("End", "Game Over");
-//    }
+    private void gameOver()
+    {
+        new PostAlertDialog(this, new Handler()).createExitDialog("End", "Game Over");
+    }
 
     protected class TouchManager implements View.OnTouchListener{
 

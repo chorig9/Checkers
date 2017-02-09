@@ -1,12 +1,17 @@
 package edu.game.checkers.core;
 
 import android.app.Dialog;
+import android.content.ComponentName;
 import android.content.Context;
 import android.content.DialogInterface;
+import android.content.Intent;
+import android.content.ServiceConnection;
 import android.content.SharedPreferences;
 import android.graphics.Color;
 import android.os.Bundle;
+import android.os.IBinder;
 import android.support.annotation.NonNull;
+import android.support.v7.app.AppCompatActivity;
 import android.text.Editable;
 import android.text.TextWatcher;
 import android.util.TypedValue;
@@ -34,10 +39,7 @@ import edu.game.checkers.core.callbacks.RequestCallback;
 import edu.game.checkers.core.callbacks.ResponseCallback;
 import edu.game.checkers.core.callbacks.SubscriptionListener;
 
-public class NetworkActivity extends NetworkClientActivity {
-
-    private final static String NAME = "name";
-    private final static String PASSWORD = "password";
+public class NetworkActivity extends AppCompatActivity {
 
     private ArrayList<Friend> currentFriendsList = new ArrayList<>();
     private ArrayList<Friend> friendsList = new ArrayList<>();
@@ -45,6 +47,78 @@ public class NetworkActivity extends NetworkClientActivity {
     private ListView listView;
 
     private PostAlertDialog dialog;
+
+    // state of activity (has list been loaded and layout changed?)
+    private boolean listLoaded = false;
+
+    NetworkService networkService;
+    boolean bound = false;
+    volatile boolean active = false;
+
+    @Override
+    protected void onStart() {
+        super.onStart();
+        active = true;
+        // Bind to NetworkService
+        Intent intent = new Intent(this, NetworkService.class);
+        bindService(intent, connection, Context.BIND_AUTO_CREATE);
+    }
+
+    @Override
+    protected void onStop() {
+        super.onStop();
+        active = false;
+        // Unbind from the service
+        if (bound)
+            unbindService(connection);
+        bound = false;
+    }
+
+    /** Defines callbacks for service binding, passed to bindService() */
+    protected ServiceConnection connection = new ServiceConnection() {
+
+        @Override
+        public void onServiceConnected(ComponentName className,
+                                       IBinder service) {
+            // We've bound to NetworkService, cast the IBinder and get NetworkService instance
+            NetworkService.NetworkBinder binder = (NetworkService.NetworkBinder) service;
+            networkService = binder.getService();
+            bound = true;
+        }
+
+        @Override
+        public void onServiceDisconnected(ComponentName arg0) {
+            bound = false;
+        }
+    };
+
+    @Override
+    public void onBackPressed() {
+        if(listLoaded){
+            EditText editText = (EditText) findViewById(R.id.search);
+            final String username = editText.getText().toString();
+
+            if(!username.isEmpty()){
+                editText.setText("");
+            }
+            else {
+                dialog.createQuestionDialog("Exit", "Do you want to exit?",
+                        new DialogInterface.OnClickListener() {
+                            @Override
+                            public void onClick(DialogInterface dialog, int which) {
+                                if(which == Dialog.BUTTON_POSITIVE){
+                                    NetworkActivity.super.onBackPressed();
+                                }
+                                else{
+                                    dialog.dismiss();
+                                }
+                            }
+                        });
+            }
+        }
+        else
+            super.onBackPressed();
+    }
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -66,11 +140,11 @@ public class NetworkActivity extends NetworkClientActivity {
         SharedPreferences preferences = getSharedPreferences(OptionsActivity.OPTIONS_FILE,
                 MODE_PRIVATE);
 
-        String name = preferences.getString(NAME, getResources().getString(R.string.enter_name));
+        String name = preferences.getString("name", getResources().getString(R.string.enter_name));
         if(!name.equals(getResources().getString(R.string.enter_username)))
             ((EditText) findViewById(R.id.username)).setText(name);
 
-        String password = preferences.getString(PASSWORD, getResources().getString(R.string.enter_password));
+        String password = preferences.getString("password", getResources().getString(R.string.enter_password));
         if(!password.equals(getResources().getString(R.string.enter_password)))
             ((EditText) findViewById(R.id.password)).setText(password);
     }
@@ -86,14 +160,10 @@ public class NetworkActivity extends NetworkClientActivity {
                 MODE_PRIVATE);
         SharedPreferences.Editor editor = preferences.edit();
         String name = ((EditText) findViewById(R.id.username)).getText().toString();
-        editor.putString(NAME,  name);
+        editor.putString("name",  name);
         String password = ((EditText) findViewById(R.id.password)).getText().toString();
-        editor.putString(PASSWORD, password);
+        editor.putString("password", password);
         editor.apply();
-
-        SharedPreferences optPreferences = getSharedPreferences(OptionsActivity.OPTIONS_FILE,
-                MODE_PRIVATE);
-        int options = optPreferences.getInt(OptionsActivity.OPTIONS_KEY, 0);
 
         networkService.connectToServer(name, password, new ConnectionCallback() {
             @Override
@@ -116,6 +186,8 @@ public class NetworkActivity extends NetworkClientActivity {
     }
 
     private void initList() {
+
+        listLoaded = true;
 
         networkService.setPresenceListener(new PresenceCallback() {
             @Override
@@ -228,7 +300,10 @@ public class NetworkActivity extends NetworkClientActivity {
                     }
                 });
                 if(response.equals("ok")){
-                    // TODO - start game
+                    SharedPreferences optPreferences = getSharedPreferences(OptionsActivity.OPTIONS_FILE,
+                            MODE_PRIVATE);
+                    int options = optPreferences.getInt(OptionsActivity.OPTIONS_KEY, 0);
+                    startGame(options, manager);
                 }
                 else if(response.equals("no")){
                     dialog.createInfoDialog("Response",
@@ -241,36 +316,13 @@ public class NetworkActivity extends NetworkClientActivity {
         });
     }
 
-    private void initializeGame(final String name, final int options) {
-//        networkService.sendRequest(new Message(Message.INVITE, name),
-//                NetworkService.USER_TIMEOUT, new ServerResponseHandler() {
-//                    @Override
-//                    public void onServerResponse(final Message response) {
-//                        if(response.getCode().equals(Message.OK)){
-//                            startGame(name, options);
-//                        }
-//                        else if(response.getCode().equals(Message.NO)){
-//                            new AlertDialog(NetworkActivity.this).
-//                                    createInfoDialog("Player rejected your invite");
-//                        }
-//                        else{
-//                            new AlertDialog(NetworkActivity.this).
-//                                    createInfoDialog(response.getArguments().get(0));
-//                        }
-//                    }});
-    }
+    private void startGame(final int options, CommunicationManager manager){
+        networkService.saveCommunicationManager(manager);
+        Intent intent = new Intent(NetworkActivity.this, NetworkGameActivity.class);
+        intent.putExtra("options", options);
+        intent.putExtra("name", manager.getOtherName());
 
-    private void startGame(final String name, final int options){
-//        networkService.sendRequest(new Message(Message.START_GAME), NetworkService.USER_TIMEOUT,
-//                new ServerResponseHandler(){
-//            @Override
-//            public void onServerResponse(Message response) {
-//                Intent intent = new Intent(NetworkActivity.this, NetworkGameActivity.class);
-//                intent.putExtra("NAME", name);
-//                intent.putExtra("options", options);
-//                startActivity(intent);
-//            }
-//        });
+        startActivity(intent);
     }
 
     public void showUsers(final View view){
@@ -340,7 +392,6 @@ public class NetworkActivity extends NetworkClientActivity {
 
             if(friend != null){
                 name.setText(friend.username);
-                status.setText(friend.status);
                 if(!friend.accepted){
                     name.setTextColor(Color.GRAY);
                     status.setTextColor(Color.GRAY);
@@ -349,11 +400,16 @@ public class NetworkActivity extends NetworkClientActivity {
                     name.setTextColor(Color.BLACK);
                     status.setTextColor(Color.BLACK);
                 }
-            }
 
+                if(friend.status.equals("available"))
+                    name.setBackgroundColor(Color.GREEN);
+                else
+                    name.setBackgroundColor(Color.RED);
+
+                status.setText(friend.info);
+            }
             return convertView;
         }
-
     }
 
     private class ServerRequestCallback implements RequestCallback {
@@ -372,7 +428,17 @@ public class NetworkActivity extends NetworkClientActivity {
                 public void onClick(DialogInterface dialog, int which) {
                     if(which == Dialog.BUTTON_POSITIVE) {
                         manager.sendResponse(requestId, "yes");
-                        // TODO - start game
+
+                        Friend otherPlayer = null;
+                        for(Friend friend : friendsList){
+                            if(friend.username.equals(manager.getOtherName()))
+                                otherPlayer = friend;
+                        }
+
+                        if(otherPlayer == null)
+                            NetworkActivity.this.dialog.createInfoDialog("Error", "User nto found");
+                        else
+                            startGame(Integer.valueOf(otherPlayer.info), manager);
                     }
                     else{
                         manager.sendResponse(requestId, "no");
@@ -386,52 +452,4 @@ public class NetworkActivity extends NetworkClientActivity {
             }
         }
     }
-
-//    //responsible for handling server requests and connection errors
-//    private class ServerRequestHandlerAdapter implements ServerRequestHandler {
-//
-//        @Override
-//        public void onServerRequest(final Message msg) {
-//            if(active) {
-//                switch (msg.getCode()) {
-//                    case Message.INVITE:
-//                        new AlertDialog(NetworkActivity.this).createQuestionDialog(
-//                                msg.getArguments().get(0) + " invited you, accept?",
-//                                new DialogInterface.OnClickListener() { // 'ok' button
-//                                    @Override
-//                                    public void onClick(DialogInterface dialog, int which) {
-//                                        networkService.sendResponse(new Message(Message.OK));
-//                                        SharedPreferences optPreferences = getSharedPreferences(OptionsActivity.OPTIONS_FILE,
-//                                                MODE_PRIVATE);
-//                                        int options = optPreferences.getInt(OptionsActivity.OPTIONS_KEY, 0);
-//                                        startGame(msg.getArguments().get(0), options);
-//                                        dialog.dismiss();
-//                                    }
-//                                },
-//                                new DialogInterface.OnClickListener() { // 'no' button
-//                                    @Override
-//                                    public void onClick(DialogInterface dialog, int which) {
-//                                        networkService.sendResponse(new Message(Message.NO));
-//                                        dialog.dismiss();
-//                                    }
-//                                });
-//                        break;
-//                    case Message.UPDATE_PLAYERS:
-//                        if (msg.getArguments().get(0).equals("-"))   // delete player from list
-//                            list.remove(msg.getArguments().get(1));
-//                        else
-//                            list.add(msg.getArguments().get(1));    // add player to list
-//                        adapter.notifyDataSetChanged();
-//                        break;
-//                }
-//            }
-//        }
-//
-//        @Override
-//        public void onConnectionError(String error) {
-//            if(active)
-//                new AlertDialog(NetworkActivity.this).createExitDialog("Error", error);
-//        }
-//    }
-
 }

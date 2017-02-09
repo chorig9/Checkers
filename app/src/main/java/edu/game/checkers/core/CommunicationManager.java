@@ -104,7 +104,8 @@ public class CommunicationManager {
     }
 
     private String nextId(){
-        return localName + Integer.toString(IdCounter++);
+        IdCounter = (IdCounter + 1) % Integer.MAX_VALUE;
+        return localName + Integer.toString(IdCounter);
     }
 
 }
