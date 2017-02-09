@@ -73,11 +73,6 @@ public class GameActivity extends AppCompatActivity {
         return new TouchManager();
     }
 
-    private void gameOver()
-    {
-        new AlertDialog(this).createExitDialog("End", "Game Over");
-    }
-
     protected class TouchManager implements View.OnTouchListener{
 
         protected Position calculatePosition(View v, MotionEvent event){

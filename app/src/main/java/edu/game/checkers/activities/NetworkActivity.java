@@ -27,7 +27,7 @@ import android.widget.EditText;
 import android.widget.LinearLayout;
 import android.widget.ListView;
 import android.widget.TextView;
-
+import android.os.Handler;
 import java.util.ArrayList;
 
 import edu.board.checkers.R;
@@ -45,6 +45,8 @@ public class NetworkActivity extends AppCompatActivity {
     private ArrayAdapter<Friend> adapter;
     private ListView listView;
 
+    private PostAlertDialog dialog;
+
     private volatile boolean active = false;
 
     @Override
@@ -53,6 +55,7 @@ public class NetworkActivity extends AppCompatActivity {
         this.getWindow().setFlags(WindowManager.LayoutParams.FLAG_FULLSCREEN,
                 WindowManager.LayoutParams.FLAG_FULLSCREEN);
 
+        dialog = new PostAlertDialog(this, new Handler());
         setContentView(R.layout.activity_enter_name);
         initName();
     }
@@ -130,8 +133,7 @@ public class NetworkActivity extends AppCompatActivity {
         networkService.connectToServer(name, password, new ConnectionCallback() {
             @Override
             public void onConnectionError(String error) {
-                new AlertDialog(NetworkActivity.this).
-                        createInfoDialog(getString(R.string.error), error);
+                dialog.createInfoDialog(getString(R.string.error), error);
             }
 
             @Override
@@ -218,8 +220,7 @@ public class NetworkActivity extends AppCompatActivity {
             public boolean onItemLongClick(AdapterView<?> parent, final View view,
                                            final int position, long id) {
 
-                new AlertDialog(NetworkActivity.this).
-                        createQuestionDialog(friendsList.get(position).username, "Remove from list?",
+                dialog.createQuestionDialog(friendsList.get(position).username, "Remove from list?",
                                 new DialogInterface.OnClickListener() {
                                     @Override
                                     public void onClick(DialogInterface dialog, int which) {
@@ -242,9 +243,12 @@ public class NetworkActivity extends AppCompatActivity {
     }
 
     public void invitePlayer(View view) {
-        LinearLayout element = (LinearLayout) view;
+        final LinearLayout element = (LinearLayout) view;
         TextView textView = (TextView) element.getChildAt(0);
         String name = textView.getText().toString();
+
+        // disallow sending multiple invitations
+        element.setEnabled(false);
 
         final CommunicationManager manager = networkService.startConnectionTo(name);
         manager.acceptConnection(new ServerRequestCallback(manager));
@@ -252,11 +256,17 @@ public class NetworkActivity extends AppCompatActivity {
         manager.sendRequest("invite", new ResponseCallback() {
             @Override
             public void onResponse(String response) {
+                element.post(new Runnable() {
+                    @Override
+                    public void run() {
+                        element.setEnabled(true);
+                    }
+                });
                 if(response.equals("ok")){
                     // TODO - start game
                 }
                 else if(response.equals("no")){
-                    new AlertDialog(NetworkActivity.this).createInfoDialog("Response",
+                    dialog.createInfoDialog("Response",
                             manager.getOtherName() + " rejected your invitation");
                 }
                 else{
@@ -264,34 +274,6 @@ public class NetworkActivity extends AppCompatActivity {
                 }
             }
         });
-
-//        TextView textView = (TextView) view;
-//        final String[] player = textView.getText().toString().split(Message.EXTRA_SEPARATOR);
-//        final String name = player[0];
-//        final int options = Integer.decode(player[1]);
-//
-//        final SharedPreferences optPreferences = getSharedPreferences(OptionsActivity.OPTIONS_FILE,
-//                MODE_PRIVATE);
-//        int myOptions = optPreferences.getInt(OptionsActivity.OPTIONS_KEY, 0);
-//
-//        if(options != myOptions){
-//            new AlertDialog(this)
-//                    .createQuestionDialog("If you continue your options will be temporarily changed, proceed?",
-//                            new DialogInterface.OnClickListener() { // yes
-//                                @Override
-//                                public void onClick(DialogInterface dialog, int which) {
-//                                    initializeGame(name, options);
-//                                }
-//                            }, new DialogInterface.OnClickListener() { // no
-//                                @Override
-//                                public void onClick(DialogInterface dialog, int which) {
-//                                    // nothing
-//                                }
-//                            });
-//        }
-//        else{
-//            initializeGame(name, options);
-//        }
     }
 
     private void initializeGame(final String name, final int options) {
@@ -434,7 +416,7 @@ public class NetworkActivity extends AppCompatActivity {
             };
 
             if(request.equals("invitation")){
-                new AlertDialog(NetworkActivity.this).createQuestionDialog("Invitation",
+                dialog.createQuestionDialog("Invitation",
                         "Accept invitation from: " + manager.getOtherName() + " ?", invitationAccept);
             }
         }

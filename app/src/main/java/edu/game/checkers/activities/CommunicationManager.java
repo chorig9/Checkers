@@ -16,7 +16,7 @@ public class CommunicationManager {
     private ConnectionCallback connectionCallback;
 
     private String localName;
-    private int IdCounter = 0;
+    private static int IdCounter = 0;
 
     private volatile boolean inGame = false;
     private GameController gameController;
@@ -41,7 +41,7 @@ public class CommunicationManager {
 
                     switch (type){
                         case "response":
-                            ResponseCallback callback = responseMap.get(id);
+                            ResponseCallback callback = responseMap.remove(id);
                             if(callback != null)
                                 callback.onResponse(body);
                             break;
