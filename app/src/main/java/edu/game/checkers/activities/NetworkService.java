@@ -68,10 +68,10 @@ public class NetworkService extends Service {
         return binder;
     }
 
-    public void connectToServer(ConnectionCallback callback)
+    public void connectToServer(String username, String password, ConnectionCallback callback)
     {
         this.callback = callback;
-        new ConnectToServerTask(callback).execute("android_test", "test");
+        new ConnectToServerTask(callback).execute(username, password);
     }
 
     public void startMainThread(final ConnectionCallback callback)
@@ -173,9 +173,8 @@ public class NetworkService extends Service {
 
     public Collection<Friend> getFriendsList() {
         try{
-           // if(!xmpp.roster.isLoaded()){
-                xmpp.roster.reloadAndWait();
-           // }
+            // reload list
+            xmpp.roster.reloadAndWait();
 
             Collection<RosterEntry> entries = xmpp.roster.getEntries();
             Collection<Friend> users = new ArrayList<>();
@@ -210,13 +209,7 @@ public class NetworkService extends Service {
     }
 
     public void setSubscriptionListener(final SubscriptionListener listener){
-        // notifies when user add/remove from friends
-        xmpp.conn.addAsyncStanzaListener(new StanzaListener() {
-            @Override
-            public void processPacket(Stanza packet) throws SmackException.NotConnectedException {
-                listener.onSubscribtionChange();
-            }
-        }, new OrFilter(PresenceTypeFilter.SUBSCRIBED, PresenceTypeFilter.UNSUBSCRIBE));
+        xmpp.subscriptionListener = listener;
     }
 
     private String parseFrom(String from){
@@ -395,6 +388,7 @@ public class NetworkService extends Service {
         private AbstractXMPPConnection conn;
         private Chat chat;
         private Roster roster;
+        private SubscriptionListener subscriptionListener = null;
 
         public XMPP(String username, String password)
                 throws IOException, XMPPException, SmackException {
@@ -460,18 +454,29 @@ public class NetworkService extends Service {
                                 roster.reloadAndWait();
                             } catch (Exception e) {
                                 callback.onConnectionError(e.getMessage());
+                                return;
                             }
                         }
                         RosterEntry entry = roster.getEntry(packet.getFrom());
                         if(entry != null) {
                             try {
                                 roster.removeEntry(entry);
+                                if(subscriptionListener != null)
+                                    subscriptionListener.onSubscribtionChange();
                             } catch (Exception e) {
                                 callback.onConnectionError(e.getMessage());
                             }
                         }
                     }
                 }, PresenceTypeFilter.UNSUBSCRIBE);
+
+                conn.addAsyncStanzaListener(new StanzaListener() {
+                    @Override
+                    public void processPacket(Stanza packet) throws SmackException.NotConnectedException {
+                        if(subscriptionListener != null)
+                            subscriptionListener.onSubscribtionChange();
+                    }
+                }, PresenceTypeFilter.SUBSCRIBED);
             }
         }
 

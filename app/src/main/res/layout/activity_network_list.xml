@@ -4,23 +4,16 @@
     android:orientation="vertical" android:layout_width="match_parent"
     android:layout_height="match_parent">
 
-    <RelativeLayout
-        android:id="@+id/search_layout"
+    <EditText
+        android:id="@+id/search"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:layout_centerHorizontal="true"
         android:layout_alignParentTop="true"
-        android:orientation="vertical">
-        <EditText
-            android:id="@+id/search"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:hint="@string/enter_username"
-            android:textSize="20sp"/>
-    </RelativeLayout>
+        android:hint="@string/enter_username"
+        android:textSize="20sp"/>
 
     <LinearLayout
-        android:layout_below="@id/search_layout"
+        android:layout_below="@id/search"
         android:id="@+id/invite_space"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
@@ -29,7 +22,7 @@
     </LinearLayout>
 
     <ListView
-        android:layout_below="@id/invite_space"
+        android:layout_below="@id/search"
         android:id="@+id/players_list"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"

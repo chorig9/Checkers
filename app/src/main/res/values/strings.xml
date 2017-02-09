@@ -18,4 +18,5 @@
     <string name="turn">turn:</string>
     <string name="search">search</string>
     <string name="enter_username">Enter username</string>
+    <string name="enter_password">Enter password</string>
 </resources>
