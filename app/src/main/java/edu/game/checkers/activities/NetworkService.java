@@ -36,23 +36,17 @@ import java.util.logging.Logger;
 public class NetworkService extends Service {
 
     private final IBinder binder = new NetworkBinder();
+    private volatile boolean connected = false;
 
     private final static int PORT = 5222;
     private final static String HOST = "89.40.127.125";
     private final static String SERVICE_NAME = "example.com";
 
-    // in ms
-    public final static int USER_TIMEOUT = 10000;
-    private final static int QUEUE_CAPACITY = 10;
+    private String username;
 
-    private volatile boolean connected = false;
-
-    private volatile boolean inGame = false;
-    private GameController gameController;
     private XMPP xmpp;
-    private ConnectionCallback callback;
-
-    private Queue<Message> responseQueue = new ArrayBlockingQueue<>(QUEUE_CAPACITY);
+    private ConnectionCallback connectionCallback;
+    private ConnectionCreatedCallback connectionCreatedCallback;
 
     @Override
     public void onDestroy() {
@@ -67,73 +61,19 @@ public class NetworkService extends Service {
 
     public void connectToServer(String username, String password, ConnectionCallback callback)
     {
-        this.callback = callback;
+        this.connectionCallback = callback;
+        this.username = username;
         new ConnectToServerTask(callback).execute(username, password);
     }
 
-    public void startMainThread(final ConnectionCallback callback)
-    {
-//        Thread thread = new Thread(new Runnable() {
-//            @Override
-//            public void run() {
-//                try{
-//                    while(connected){
-//                        // blocking
-//                        String str = in.readLine();
-//
-//                        if(str == null){
-//                            new EndConnectionTask().execute();
-//                            return;
-//                        }
-//
-//                        Message msg = new Message(str);
-//
-//                        switch (msg.getType()){
-//                            case Message.REQUEST:
-//                                new HandleRequestTask(callback).execute(msg);
-//                                break;
-//                            case Message.RESPONSE:
-//                                responseQueue.add(msg);
-//                                break;
-//                            case Message.GAME:
-//                                if(inGame)
-//                                    new HandleGameTask(gameController).execute(msg);
-//                                break;
-//                        }
-//                    }
-//                }
-//                catch (IOException e){
-//                    new HandleErrorTask(callback).execute(e.getMessage());
-//                }
-//            }
-//        });
-//
-//        thread.start();
+    public CommunicationManager startConnectionTo(String user){
+        ChatManager chatManager = ChatManager.getInstanceFor(xmpp.conn);
+        Chat chat = chatManager.createChat(user);
+
+        return new CommunicationManager(this.username, chat, connectionCallback);
     }
 
-
-
-    public void sendRequest(final Message msg, int timeout, final ServerResponseHandler callback) {
-        msg.addPrefix(Message.REQUEST);
-        new MakeRequestTask(callback, timeout).execute(msg);
-    }
-
-    public void sendResponse(final Message msg) {
-        msg.addPrefix(Message.RESPONSE);
-        new SendMessageTask().execute(msg);
-    }
-
-    public void sendGameMessage(final Message msg) {
-        msg.addPrefix(Message.GAME);
-        new SendMessageTask().execute(msg);
-    }
-
-    public void startGame(GameController controller) {
-        this.gameController = controller;
-        inGame = true;
-    }
-
-    public void inviteUser(final String username, final InviteCallback callback){
+    public void subscribeUser(final String username, final InviteCallback callback){
         try{
             Presence subscribe = new Presence(Presence.Type.subscribe);
             subscribe.setTo(username);
@@ -155,7 +95,7 @@ public class NetworkService extends Service {
             }, PresenceTypeFilter.UNSUBSCRIBED);
         }
         catch(SmackException.NotConnectedException e){
-            this.callback.onConnectionError(e.getMessage());
+            this.connectionCallback.onConnectionError(e.getMessage());
         }
     }
 
@@ -164,7 +104,7 @@ public class NetworkService extends Service {
             RosterEntry entry = xmpp.roster.getEntry(username);
             xmpp.roster.removeEntry(entry);
         } catch(Exception e){
-            callback.onConnectionError(e.getMessage());
+            connectionCallback.onConnectionError(e.getMessage());
         }
     }
 
@@ -185,7 +125,7 @@ public class NetworkService extends Service {
 
             return users;
         } catch(Exception e){
-            callback.onConnectionError(e.getMessage());
+            connectionCallback.onConnectionError(e.getMessage());
             return null;
         }
     }
@@ -209,6 +149,10 @@ public class NetworkService extends Service {
         xmpp.subscriptionListener = listener;
     }
 
+    public void setConnectionCreatedCallback(ConnectionCreatedCallback callback){
+        connectionCreatedCallback = callback;
+    }
+
     private String parseFrom(String from){
         int index = from.indexOf(SERVICE_NAME);
         return from.substring(0, index + SERVICE_NAME.length());
@@ -218,55 +162,6 @@ public class NetworkService extends Service {
         NetworkService getService() {
             // Return this instance of NetworkService so clients can call public methods
             return NetworkService.this;
-        }
-    }
-
-    private class MakeRequestTask extends AsyncTask<Message, Void, Void>{
-
-        ServerResponseHandler callback;
-        Message response = null;
-        int timeout;
-
-        public MakeRequestTask(ServerResponseHandler callback, int timeout){
-            this.callback = callback;
-            this.timeout = timeout;
-        }
-
-        @Override
-        protected Void doInBackground(Message... msg) {
-            // send request
-//            out.println(msg[0].toString());
-//            out.flush();
-//
-//            if(callback != null) {
-//                // wait for response
-//                long startTime = System.currentTimeMillis();
-//                while(System.currentTimeMillis() - startTime < timeout
-//                        && responseQueue.isEmpty()){
-//                }
-//
-//                if(!responseQueue.isEmpty())
-//                    response = responseQueue.poll();
-//                else
-//                    response = new Message(Message.TIMEOUT, "timeout");
-//            }
-
-            return null;
-        }
-
-        @Override
-        protected void onPostExecute(Void aVoid) {
-            if(callback != null)
-                callback.onServerResponse(response);
-        }
-    }
-
-    private class SendMessageTask extends AsyncTask<Message, Void, Void>
-    {
-        @Override
-        protected Void doInBackground(Message... msg) {
-            //TODO
-            return null;
         }
     }
 
@@ -301,25 +196,9 @@ public class NetworkService extends Service {
             else {
                 xmpp = handler;
                 connected = true;
-                startMainThread(callback);
 
                 callback.onSuccess();
             }
-        }
-    }
-
-    private class HandleGameTask extends AsyncTask<Message, Void, Void>
-    {
-        GameController callback;
-
-        public HandleGameTask(GameController callback){
-            this.callback = callback;
-        }
-
-        @Override
-        protected Void doInBackground(Message... params) {
-            callback.onMessage(params[0]);
-            return null;
         }
     }
 
@@ -338,56 +217,13 @@ public class NetworkService extends Service {
         }
     }
 
-    private class HandleRequestTask extends AsyncTask<Message, Void, Void>{
-
-        ServerRequestHandler callback;
-        Message msg;
-
-        public HandleRequestTask(ServerRequestHandler callback){
-            this.callback = callback;
-        }
-
-        @Override
-        protected Void doInBackground(Message... params) {
-            msg = params[0];
-            return null;
-        }
-
-        @Override
-        protected void onPostExecute(Void aVoid) {
-            callback.onServerRequest(msg);
-        }
-    }
-
-    private class HandleErrorTask extends AsyncTask<String, Void, Void>{
-
-        ServerRequestHandler callback;
-        String msg;
-
-        public HandleErrorTask(ServerRequestHandler callback){
-            this.callback = callback;
-        }
-
-        @Override
-        protected Void doInBackground(String... params) {
-            msg = params[0];
-            return null;
-        }
-
-        @Override
-        protected void onPostExecute(Void aVoid) {
-            callback.onConnectionError(msg);
-        }
-    }
-
     private class XMPP {
 
         private AbstractXMPPConnection conn;
-        private Chat chat;
         private Roster roster;
         private SubscriptionListener subscriptionListener = null;
 
-        public XMPP(String username, String password)
+        public XMPP(final String username, String password)
                 throws IOException, XMPPException, SmackException {
 
             XMPPTCPConnectionConfiguration config = XMPPTCPConnectionConfiguration.builder()
@@ -404,16 +240,6 @@ public class NetworkService extends Service {
             conn.connect();
             conn.login();
             if(conn.isAuthenticated()) {
-                ChatManager chatManager = ChatManager.getInstanceFor(conn);
-                chatManager.addChatListener(
-                        new ChatManagerListener() {
-                            @Override
-                            public void chatCreated(Chat chat, boolean createdLocally) {
-                                XMPP.this.chat = chat;
-                                chat.addMessageListener(new MessageListener());
-                            }
-                        });
-
                 roster = Roster.getInstanceFor(conn);
                 roster.setSubscriptionMode(Roster.SubscriptionMode.manual);
 
@@ -430,7 +256,7 @@ public class NetworkService extends Service {
                                     try {
                                         roster.reloadAndWait();
                                     } catch (Exception e) {
-                                        callback.onConnectionError(e.getMessage());
+                                        connectionCallback.onConnectionError(e.getMessage());
                                     }
                                 }
 
@@ -450,7 +276,7 @@ public class NetworkService extends Service {
                             try {
                                 roster.reloadAndWait();
                             } catch (Exception e) {
-                                callback.onConnectionError(e.getMessage());
+                                connectionCallback.onConnectionError(e.getMessage());
                                 return;
                             }
                         }
@@ -461,7 +287,7 @@ public class NetworkService extends Service {
                                 if(subscriptionListener != null)
                                     subscriptionListener.onSubscriptionChange();
                             } catch (Exception e) {
-                                callback.onConnectionError(e.getMessage());
+                                connectionCallback.onConnectionError(e.getMessage());
                             }
                         }
                     }
@@ -474,16 +300,20 @@ public class NetworkService extends Service {
                             subscriptionListener.onSubscriptionChange();
                     }
                 }, PresenceTypeFilter.SUBSCRIBED);
+
+                ChatManager chatManager = ChatManager.getInstanceFor(conn);
+                chatManager.addChatListener(
+                        new ChatManagerListener() {
+                            @Override
+                            public void chatCreated(Chat chat, boolean createdLocally) {
+                                if(!createdLocally) {
+                                    connectionCreatedCallback.
+                                            onConnectionCreated(new CommunicationManager(username,
+                                                    chat, connectionCallback));
+                                }
+                            }
+                        });
             }
         }
-
-        private class MessageListener implements ChatMessageListener {
-            @Override
-            public void processMessage(Chat chat, org.jivesoftware.smack.packet.Message message) {
-                System.out.println("Received message: "
-                        + (message != null ? message.getBody() : "NULL"));
-            }
-        }
-
     }
 }

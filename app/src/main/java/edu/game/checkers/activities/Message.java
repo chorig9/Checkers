@@ -14,24 +14,16 @@ public class Message {
     //some arguments after separator (separator before each argument)
 
     public final static String SEPARATOR = "#", EXTRA_SEPARATOR = "@";
-    public final static String HI = "hi",
-            PLAYER_WHITE = "1",
+    public final static String PLAYER_WHITE = "1",
             PLAYER_BLACK = "2",
-            ERROR = "error", // unexpected or wrong response
             NO = "no",       // client response e.g. for invite
             OK = "ok",       // same
-            EXIT_SERVER = "exit_server", // player disconnects from server
             EXIT_GAME = "exit_game",     // player disconnects from game
             GAME_OVER = "game_over",// game has ended (one player won or draw)
             INVITE = "invite",           // invite player to game
-            GET_PLAYERS = "get_players", // get list of all connected players
-            UPDATE_PLAYERS = "up_players",
             START_GAME = "start",
             CHANGE_OPTIONS = "options",
             MOVE = "move",               // game move
-            TIMEOUT = "timeout",
-            PING = "ping",
-            INFO = "info",
             UNDO_MOVE = "undo_move";
 
     public final static char REQUEST = '$',

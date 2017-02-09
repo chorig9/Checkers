@@ -1,5 +1,6 @@
 package edu.game.checkers.activities;
 
+import android.app.Dialog;
 import android.content.ComponentName;
 import android.content.Context;
 import android.content.DialogInterface;
@@ -129,12 +130,20 @@ public class NetworkActivity extends AppCompatActivity {
         networkService.connectToServer(name, password, new ConnectionCallback() {
             @Override
             public void onConnectionError(String error) {
-                new AlertDialog(NetworkActivity.this).createInfoDialog("Error", error);
+                new AlertDialog(NetworkActivity.this).
+                        createInfoDialog(getString(R.string.error), error);
             }
 
             @Override
             public void onSuccess() {
                 initList();
+            }
+        });
+
+        networkService.setConnectionCreatedCallback(new ConnectionCreatedCallback() {
+            @Override
+            public void onConnectionCreated(CommunicationManager manager) {
+                manager.acceptConnection(new ServerRequestCallback(manager));
             }
         });
     }
@@ -214,9 +223,14 @@ public class NetworkActivity extends AppCompatActivity {
                                 new DialogInterface.OnClickListener() {
                                     @Override
                                     public void onClick(DialogInterface dialog, int which) {
-                                        networkService.unsubscribeUser(friendsList.get(position).username);
-                                        friendsList.remove(position);
-                                        showUsers(findViewById(R.id.search));
+                                        if(which == Dialog.BUTTON_POSITIVE) {
+                                            networkService.unsubscribeUser(friendsList.get(position).username);
+                                            friendsList.remove(position);
+                                            showUsers(findViewById(R.id.search));
+                                        }
+                                        else{
+                                            dialog.dismiss();
+                                        }
                                     }
                                 });
 
@@ -228,6 +242,29 @@ public class NetworkActivity extends AppCompatActivity {
     }
 
     public void invitePlayer(View view) {
+        LinearLayout element = (LinearLayout) view;
+        TextView textView = (TextView) element.getChildAt(0);
+        String name = textView.getText().toString();
+
+        final CommunicationManager manager = networkService.startConnectionTo(name);
+        manager.acceptConnection(new ServerRequestCallback(manager));
+
+        manager.sendRequest("invite", new ResponseCallback() {
+            @Override
+            public void onResponse(String response) {
+                if(response.equals("ok")){
+                    // TODO - start game
+                }
+                else if(response.equals("no")){
+                    new AlertDialog(NetworkActivity.this).createInfoDialog("Response",
+                            manager.getOtherName() + " rejected your invitation");
+                }
+                else{
+                    // Error
+                }
+            }
+        });
+
 //        TextView textView = (TextView) view;
 //        final String[] player = textView.getText().toString().split(Message.EXTRA_SEPARATOR);
 //        final String name = player[0];
@@ -316,7 +353,7 @@ public class NetworkActivity extends AppCompatActivity {
                     friend.accepted = false;
                     friendsList.add(friend);
 
-                    networkService.inviteUser(username, new InviteCallback() {
+                    networkService.subscribeUser(username, new InviteCallback() {
                         @Override
                         public void onInvitedResponse(boolean accepted) {
                             if(accepted)
@@ -370,6 +407,37 @@ public class NetworkActivity extends AppCompatActivity {
             return convertView;
         }
 
+    }
+
+    private class ServerRequestCallback implements RequestCallback {
+
+        CommunicationManager manager;
+        ServerRequestCallback(CommunicationManager manager){
+            this.manager = manager;
+        }
+
+        @Override
+        public void onRequest(final String requestId, String request) {
+
+            final DialogInterface.OnClickListener invitationAccept =
+                    new DialogInterface.OnClickListener() {
+                @Override
+                public void onClick(DialogInterface dialog, int which) {
+                    if(which == Dialog.BUTTON_POSITIVE) {
+                        manager.sendResponse(requestId, "yes");
+                        // TODO - start game
+                    }
+                    else{
+                        manager.sendResponse(requestId, "no");
+                    }
+                }
+            };
+
+            if(request.equals("invitation")){
+                new AlertDialog(NetworkActivity.this).createQuestionDialog("Invitation",
+                        "Accept invitation from: " + manager.getOtherName() + " ?", invitationAccept);
+            }
+        }
     }
 
 //    //responsible for handling server requests and connection errors
