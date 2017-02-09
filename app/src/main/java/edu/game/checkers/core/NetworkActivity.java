@@ -1,17 +1,12 @@
-package edu.game.checkers.activities;
+package edu.game.checkers.core;
 
 import android.app.Dialog;
-import android.content.ComponentName;
 import android.content.Context;
 import android.content.DialogInterface;
-import android.content.Intent;
-import android.content.ServiceConnection;
 import android.content.SharedPreferences;
 import android.graphics.Color;
 import android.os.Bundle;
-import android.os.IBinder;
 import android.support.annotation.NonNull;
-import android.support.v7.app.AppCompatActivity;
 import android.text.Editable;
 import android.text.TextWatcher;
 import android.util.TypedValue;
@@ -31,14 +26,18 @@ import android.os.Handler;
 import java.util.ArrayList;
 
 import edu.board.checkers.R;
+import edu.game.checkers.core.callbacks.ConnectionCallback;
+import edu.game.checkers.core.callbacks.ConnectionCreatedCallback;
+import edu.game.checkers.core.callbacks.InviteCallback;
+import edu.game.checkers.core.callbacks.PresenceCallback;
+import edu.game.checkers.core.callbacks.RequestCallback;
+import edu.game.checkers.core.callbacks.ResponseCallback;
+import edu.game.checkers.core.callbacks.SubscriptionListener;
 
-public class NetworkActivity extends AppCompatActivity {
+public class NetworkActivity extends NetworkClientActivity {
 
     private final static String NAME = "name";
     private final static String PASSWORD = "password";
-
-    private NetworkService networkService;
-    private boolean bound = false;
 
     private ArrayList<Friend> currentFriendsList = new ArrayList<>();
     private ArrayList<Friend> friendsList = new ArrayList<>();
@@ -46,8 +45,6 @@ public class NetworkActivity extends AppCompatActivity {
     private ListView listView;
 
     private PostAlertDialog dialog;
-
-    private volatile boolean active = false;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -59,43 +56,6 @@ public class NetworkActivity extends AppCompatActivity {
         setContentView(R.layout.activity_enter_name);
         initName();
     }
-
-    @Override
-    protected void onStart() {
-        super.onStart();
-        active = true;
-        // Bind to NetworkService
-        Intent intent = new Intent(this, NetworkService.class);
-        bindService(intent, connection, Context.BIND_AUTO_CREATE);
-    }
-
-    @Override
-    protected void onStop() {
-        super.onStop();
-        active = false;
-        // Unbind from the service
-        if (bound)
-            unbindService(connection);
-        bound = false;
-    }
-
-    /** Defines callbacks for service binding, passed to bindService() */
-    private ServiceConnection connection = new ServiceConnection() {
-
-        @Override
-        public void onServiceConnected(ComponentName className,
-                                       IBinder service) {
-            // We've bound to NetworkService, cast the IBinder and get NetworkService instance
-            NetworkService.NetworkBinder binder = (NetworkService.NetworkBinder) service;
-            networkService = binder.getService();
-            bound = true;
-        }
-
-        @Override
-        public void onServiceDisconnected(ComponentName arg0) {
-            bound = false;
-        }
-    };
 
     private void initName()
     {
@@ -116,6 +76,11 @@ public class NetworkActivity extends AppCompatActivity {
     }
 
     public void connect(View view) {
+        if(!bound){
+            dialog.createInfoDialog(getString(R.string.error), "Service not bounded");
+            return;
+        }
+
         // save username and password
         SharedPreferences preferences = getSharedPreferences(OptionsActivity.OPTIONS_FILE,
                 MODE_PRIVATE);

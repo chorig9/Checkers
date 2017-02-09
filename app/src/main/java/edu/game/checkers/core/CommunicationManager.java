@@ -1,4 +1,4 @@
-package edu.game.checkers.activities;
+package edu.game.checkers.core;
 
 import org.jivesoftware.smack.SmackException;
 import org.jivesoftware.smack.chat.Chat;
@@ -9,6 +9,11 @@ import org.json.JSONObject;
 
 import java.util.HashMap;
 import java.util.Map;
+
+import edu.game.checkers.core.callbacks.ConnectionCallback;
+import edu.game.checkers.core.callbacks.GameController;
+import edu.game.checkers.core.callbacks.RequestCallback;
+import edu.game.checkers.core.callbacks.ResponseCallback;
 
 public class CommunicationManager {
 

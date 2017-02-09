@@ -1,4 +1,4 @@
-package edu.game.checkers.activities;
+package edu.game.checkers.core;
 
 import android.content.SharedPreferences;
 import android.content.SharedPreferences.Editor;

@@ -1,4 +1,6 @@
-package edu.game.checkers.activities;
+package edu.game.checkers.core.callbacks;
+
+import edu.game.checkers.core.CommunicationManager;
 
 public interface ConnectionCreatedCallback {
 

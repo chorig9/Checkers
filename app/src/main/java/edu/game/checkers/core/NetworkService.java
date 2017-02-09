@@ -1,4 +1,4 @@
-package edu.game.checkers.activities;
+package edu.game.checkers.core;
 
 import android.app.Service;
 import android.content.Intent;
@@ -14,7 +14,6 @@ import org.jivesoftware.smack.XMPPException;
 import org.jivesoftware.smack.chat.Chat;
 import org.jivesoftware.smack.chat.ChatManager;
 import org.jivesoftware.smack.chat.ChatManagerListener;
-import org.jivesoftware.smack.chat.ChatMessageListener;
 import org.jivesoftware.smack.filter.PresenceTypeFilter;
 import org.jivesoftware.smack.packet.Presence;
 import org.jivesoftware.smack.packet.Stanza;
@@ -27,10 +26,14 @@ import org.jivesoftware.smack.tcp.XMPPTCPConnectionConfiguration;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Collection;
-import java.util.Queue;
-import java.util.concurrent.ArrayBlockingQueue;
 import java.util.logging.Level;
 import java.util.logging.Logger;
+
+import edu.game.checkers.core.callbacks.ConnectionCallback;
+import edu.game.checkers.core.callbacks.ConnectionCreatedCallback;
+import edu.game.checkers.core.callbacks.InviteCallback;
+import edu.game.checkers.core.callbacks.PresenceCallback;
+import edu.game.checkers.core.callbacks.SubscriptionListener;
 
 
 public class NetworkService extends Service {

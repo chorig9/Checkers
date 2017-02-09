@@ -1,4 +1,4 @@
-package edu.game.checkers.activities;
+package edu.game.checkers.core;
 
 import android.content.Context;
 import android.content.SharedPreferences;
@@ -72,6 +72,11 @@ public class GameActivity extends AppCompatActivity {
     protected TouchManager createTouchManager(){
         return new TouchManager();
     }
+
+//    private void gameOver()
+//    {
+//        new PostAlertDialog(this).createExitDialog("End", "Game Over");
+//    }
 
     protected class TouchManager implements View.OnTouchListener{
 
