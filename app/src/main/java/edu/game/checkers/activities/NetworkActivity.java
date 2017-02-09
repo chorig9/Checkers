@@ -167,7 +167,7 @@ public class NetworkActivity extends AppCompatActivity {
 
         networkService.setSubscriptionListener(new SubscriptionListener() {
             @Override
-            public void onSubscribtionChange() {
+            public void onSubscriptionChange() {
                 friendsList.clear();
                 friendsList.addAll(networkService.getFriendsList());
 

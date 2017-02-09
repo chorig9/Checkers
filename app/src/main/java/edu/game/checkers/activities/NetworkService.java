@@ -8,8 +8,6 @@ import android.os.IBinder;
 
 import org.jivesoftware.smack.AbstractXMPPConnection;
 import org.jivesoftware.smack.ConnectionConfiguration;
-import org.jivesoftware.smack.PacketCollector;
-import org.jivesoftware.smack.PresenceListener;
 import org.jivesoftware.smack.SmackException;
 import org.jivesoftware.smack.StanzaListener;
 import org.jivesoftware.smack.XMPPException;
@@ -17,7 +15,6 @@ import org.jivesoftware.smack.chat.Chat;
 import org.jivesoftware.smack.chat.ChatManager;
 import org.jivesoftware.smack.chat.ChatManagerListener;
 import org.jivesoftware.smack.chat.ChatMessageListener;
-import org.jivesoftware.smack.filter.OrFilter;
 import org.jivesoftware.smack.filter.PresenceTypeFilter;
 import org.jivesoftware.smack.packet.Presence;
 import org.jivesoftware.smack.packet.Stanza;
@@ -462,7 +459,7 @@ public class NetworkService extends Service {
                             try {
                                 roster.removeEntry(entry);
                                 if(subscriptionListener != null)
-                                    subscriptionListener.onSubscribtionChange();
+                                    subscriptionListener.onSubscriptionChange();
                             } catch (Exception e) {
                                 callback.onConnectionError(e.getMessage());
                             }
@@ -474,7 +471,7 @@ public class NetworkService extends Service {
                     @Override
                     public void processPacket(Stanza packet) throws SmackException.NotConnectedException {
                         if(subscriptionListener != null)
-                            subscriptionListener.onSubscribtionChange();
+                            subscriptionListener.onSubscriptionChange();
                     }
                 }, PresenceTypeFilter.SUBSCRIBED);
             }
