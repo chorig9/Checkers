@@ -31,13 +31,10 @@ import android.os.Handler;
 import java.util.ArrayList;
 
 import edu.board.checkers.R;
+import edu.game.checkers.core.callbacks.Callback0;
+import edu.game.checkers.core.callbacks.Callback1;
+import edu.game.checkers.core.callbacks.Callback3;
 import edu.game.checkers.core.callbacks.ConnectionCallback;
-import edu.game.checkers.core.callbacks.ConnectionCreatedCallback;
-import edu.game.checkers.core.callbacks.InviteCallback;
-import edu.game.checkers.core.callbacks.PresenceCallback;
-import edu.game.checkers.core.callbacks.RequestCallback;
-import edu.game.checkers.core.callbacks.ResponseCallback;
-import edu.game.checkers.core.callbacks.SubscriptionListener;
 
 public class NetworkActivity extends AppCompatActivity {
 
@@ -177,10 +174,32 @@ public class NetworkActivity extends AppCompatActivity {
             }
         });
 
-        networkService.setConnectionCreatedCallback(new ConnectionCreatedCallback() {
+        networkService.setGameInviteCallback(new Callback1<String>() {
             @Override
-            public void onConnectionCreated(CommunicationManager manager) {
-                manager.acceptConnection(new ServerRequestCallback(manager));
+            public void onAction(final String user) {
+                dialog.createQuestionDialog("Invitation", "Accept invitation from: " + user + " ?",
+                        new DialogInterface.OnClickListener() {
+                            @Override
+                            public void onClick(DialogInterface dialog, int which) {
+                                if(which == Dialog.BUTTON_POSITIVE) {
+                                    Friend otherPlayer = null;
+                                    for(Friend friend : friendsList){
+                                        if(friend.username.equals(user))
+                                            otherPlayer = friend;
+                                    }
+
+                                    if(otherPlayer == null) {
+                                        NetworkActivity.this.dialog.createInfoDialog("Error", "User not on list");
+                                    }
+                                    else {
+                                        networkService.sendResponse(user, "yes");
+
+                                        // take other's player options
+                                        startGame(Integer.valueOf(otherPlayer.info), user);
+                                    }
+                                }
+                            }
+                        });
             }
         });
     }
@@ -189,9 +208,9 @@ public class NetworkActivity extends AppCompatActivity {
 
         listLoaded = true;
 
-        networkService.setPresenceListener(new PresenceCallback() {
+        networkService.setPresenceListener(new Callback3<String, String, String>() {
             @Override
-            public void onPresenceChanged(String username, String presence){
+            public void onAction(String username, String presence, String info){
                 Friend friend = null;
                 for(Friend element : friendsList){
                     if(element.username.equals(username))
@@ -200,6 +219,7 @@ public class NetworkActivity extends AppCompatActivity {
 
                 if(friend != null){
                     friend.status = presence;
+                    friend.info = info;
 
                     if(currentFriendsList.contains(friend)) {
                         listView.post(new Runnable() {
@@ -213,9 +233,9 @@ public class NetworkActivity extends AppCompatActivity {
             }
         });
 
-        networkService.setSubscriptionListener(new SubscriptionListener() {
+        networkService.setSubscriptionListener(new Callback0() {
             @Override
-            public void onSubscriptionChange() {
+            public void onAction() {
                 friendsList.clear();
                 friendsList.addAll(networkService.getFriendsList());
 
@@ -282,45 +302,39 @@ public class NetworkActivity extends AppCompatActivity {
     public void invitePlayer(View view) {
         final LinearLayout element = (LinearLayout) view;
         TextView textView = (TextView) element.getChildAt(0);
-        String name = textView.getText().toString();
+        final String name = textView.getText().toString();
 
-        // disallow sending multiple invitations
-        element.setEnabled(false);
+        if(element.getTag() == null || !element.getTag().equals("invited")){
+            element.setTag("invited");
+            element.setBackgroundColor(Color.GRAY);
+            networkService.sendInvitation(name, new Callback1<Boolean>() {
+                @Override
+                public void onAction(Boolean accepted) {
 
-        final CommunicationManager manager = networkService.startConnectionTo(name);
-        manager.acceptConnection(new ServerRequestCallback(manager));
+                    listView.post(new Runnable() {
+                        @Override
+                        public void run() {
+                            element.setTag("");
+                            element.setBackgroundColor(Color.WHITE);
+                            element.invalidate();
+                        }
+                    });
 
-        manager.sendRequest("invite", new ResponseCallback() {
-            @Override
-            public void onResponse(String response) {
-                element.post(new Runnable() {
-                    @Override
-                    public void run() {
-                        element.setEnabled(true);
-                    }
-                });
-                if(response.equals("ok")){
-                    SharedPreferences optPreferences = getSharedPreferences(OptionsActivity.OPTIONS_FILE,
+                    SharedPreferences preferences = getSharedPreferences(OptionsActivity.OPTIONS_FILE,
                             MODE_PRIVATE);
-                    int options = optPreferences.getInt(OptionsActivity.OPTIONS_KEY, 0);
-                    startGame(options, manager);
+                    int options = preferences.getInt("options", 0);
+                    if(accepted){
+                        startGame(options, name);
+                    }
                 }
-                else if(response.equals("no")){
-                    dialog.createInfoDialog("Response",
-                            manager.getOtherName() + " rejected your invitation");
-                }
-                else{
-                    // Error
-                }
-            }
-        });
+            });
+        }
     }
 
-    private void startGame(final int options, CommunicationManager manager){
-        networkService.saveCommunicationManager(manager);
+    private void startGame(int options, String username){
         Intent intent = new Intent(NetworkActivity.this, NetworkGameActivity.class);
         intent.putExtra("options", options);
-        intent.putExtra("name", manager.getOtherName());
+        intent.putExtra("name", username);
 
         startActivity(intent);
     }
@@ -352,9 +366,9 @@ public class NetworkActivity extends AppCompatActivity {
                     friend.accepted = false;
                     friendsList.add(friend);
 
-                    networkService.subscribeUser(username, new InviteCallback() {
+                    networkService.subscribeUser(username, new Callback1<Boolean>() {
                         @Override
-                        public void onInvitedResponse(boolean accepted) {
+                        public void onAction(Boolean accepted) {
                             if(accepted)
                                 friend.accepted = true;
                             else
@@ -409,47 +423,6 @@ public class NetworkActivity extends AppCompatActivity {
                 status.setText(friend.info);
             }
             return convertView;
-        }
-    }
-
-    private class ServerRequestCallback implements RequestCallback {
-
-        CommunicationManager manager;
-        ServerRequestCallback(CommunicationManager manager){
-            this.manager = manager;
-        }
-
-        @Override
-        public void onRequest(final String requestId, String request) {
-
-            final DialogInterface.OnClickListener invitationAccept =
-                    new DialogInterface.OnClickListener() {
-                @Override
-                public void onClick(DialogInterface dialog, int which) {
-                    if(which == Dialog.BUTTON_POSITIVE) {
-                        manager.sendResponse(requestId, "yes");
-
-                        Friend otherPlayer = null;
-                        for(Friend friend : friendsList){
-                            if(friend.username.equals(manager.getOtherName()))
-                                otherPlayer = friend;
-                        }
-
-                        if(otherPlayer == null)
-                            NetworkActivity.this.dialog.createInfoDialog("Error", "User nto found");
-                        else
-                            startGame(Integer.valueOf(otherPlayer.info), manager);
-                    }
-                    else{
-                        manager.sendResponse(requestId, "no");
-                    }
-                }
-            };
-
-            if(request.equals("invitation")){
-                dialog.createQuestionDialog("Invitation",
-                        "Accept invitation from: " + manager.getOtherName() + " ?", invitationAccept);
-            }
         }
     }
 }

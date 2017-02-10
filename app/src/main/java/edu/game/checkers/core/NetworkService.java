@@ -15,6 +15,8 @@ import org.jivesoftware.smack.chat.Chat;
 import org.jivesoftware.smack.chat.ChatManager;
 import org.jivesoftware.smack.chat.ChatManagerListener;
 import org.jivesoftware.smack.filter.PresenceTypeFilter;
+import org.jivesoftware.smack.filter.StanzaTypeFilter;
+import org.jivesoftware.smack.packet.Message;
 import org.jivesoftware.smack.packet.Presence;
 import org.jivesoftware.smack.packet.Stanza;
 import org.jivesoftware.smack.roster.Roster;
@@ -22,6 +24,8 @@ import org.jivesoftware.smack.roster.RosterEntry;
 import org.jivesoftware.smack.roster.RosterListener;
 import org.jivesoftware.smack.tcp.XMPPTCPConnection;
 import org.jivesoftware.smack.tcp.XMPPTCPConnectionConfiguration;
+import org.json.JSONException;
+import org.json.JSONObject;
 
 import java.io.IOException;
 import java.util.ArrayList;
@@ -29,17 +33,15 @@ import java.util.Collection;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 
+import edu.game.checkers.core.callbacks.Callback0;
+import edu.game.checkers.core.callbacks.Callback1;
+import edu.game.checkers.core.callbacks.Callback3;
 import edu.game.checkers.core.callbacks.ConnectionCallback;
-import edu.game.checkers.core.callbacks.ConnectionCreatedCallback;
-import edu.game.checkers.core.callbacks.InviteCallback;
-import edu.game.checkers.core.callbacks.PresenceCallback;
-import edu.game.checkers.core.callbacks.SubscriptionListener;
 
 
 public class NetworkService extends Service {
 
     private final IBinder binder = new NetworkBinder();
-    private volatile boolean connected = false;
 
     private final static int PORT = 5222;
     private final static String HOST = "89.40.127.125";
@@ -48,14 +50,11 @@ public class NetworkService extends Service {
     private String username;
 
     private XMPP xmpp;
-    private ConnectionCallback connectionCallback;
-    private ConnectionCreatedCallback connectionCreatedCallback;
-
-    private CommunicationManager communicationManager;
+    private ConnectionCallback connectionCallback = null;
+    private Callback1<String> gameInviteCallback = null;
 
     @Override
     public void onDestroy() {
-        connected = false;
         new EndConnectionTask().execute();
     }
 
@@ -78,7 +77,7 @@ public class NetworkService extends Service {
         return new CommunicationManager(this.username, chat, connectionCallback);
     }
 
-    public void subscribeUser(final String username, final InviteCallback callback){
+    public void subscribeUser(final String username, final Callback1<Boolean> callback){
         try{
             Presence subscribe = new Presence(Presence.Type.subscribe);
             subscribe.setTo(username);
@@ -88,14 +87,14 @@ public class NetworkService extends Service {
                 @Override
                 public void processPacket(Stanza packet) throws SmackException.NotConnectedException {
                     if(parseFrom(packet.getFrom()).equals(username))
-                        callback.onInvitedResponse(true);
+                        callback.onAction(true);
                 }
             }, PresenceTypeFilter.SUBSCRIBED);
             xmpp.conn.addAsyncStanzaListener(new StanzaListener() {
                 @Override
                 public void processPacket(Stanza packet) throws SmackException.NotConnectedException {
                     if(parseFrom(packet.getFrom()).equals(username))
-                        callback.onInvitedResponse(false);
+                        callback.onAction(false);
                 }
             }, PresenceTypeFilter.UNSUBSCRIBED);
         }
@@ -113,12 +112,25 @@ public class NetworkService extends Service {
         }
     }
 
-    public void saveCommunicationManager(CommunicationManager manager){
-        this.communicationManager = manager;
+    public CommunicationManager startConnection(String to){
+        ChatManager manager = ChatManager.getInstanceFor(xmpp.conn);
+        Chat chat = manager.createChat(to);
+
+        return new CommunicationManager(username, chat, connectionCallback);
     }
 
-    public CommunicationManager getCommunicationManager(){
-        return communicationManager;
+    public void listenForConnection(final Callback1<CommunicationManager> callback){
+        ChatManager chatManager = ChatManager.getInstanceFor(xmpp.conn);
+        chatManager.addChatListener(
+                new ChatManagerListener() {
+                    @Override
+                    public void chatCreated(Chat chat, boolean createdLocally) {
+                        if(!createdLocally) {
+                            callback.onAction(new CommunicationManager(username,
+                                            chat, connectionCallback));
+                        }
+                    }
+                });
     }
 
     public Collection<Friend> getFriendsList() {
@@ -143,7 +155,7 @@ public class NetworkService extends Service {
         }
     }
 
-    public void setPresenceListener(final PresenceCallback listener){
+    public void setPresenceListener(final Callback3<String, String, String> listener){
         xmpp.roster.addRosterListener(new RosterListener() {
 
             public void entriesAdded(Collection<String> addresses) {}
@@ -153,17 +165,80 @@ public class NetworkService extends Service {
             @Override
             public void presenceChanged(Presence presence) {
                 String jid = parseFrom(presence.getFrom());
-                listener.onPresenceChanged(jid, presence.getType().name());
+                listener.onAction(jid, presence.getType().name(), presence.getStatus());
             }
         });
     }
 
-    public void setSubscriptionListener(final SubscriptionListener listener){
+    public void setSubscriptionListener(final Callback0 listener){
         xmpp.subscriptionListener = listener;
     }
 
-    public void setConnectionCreatedCallback(ConnectionCreatedCallback callback){
-        connectionCreatedCallback = callback;
+    public void setGameInviteCallback(Callback1<String> gameInviteCallback){
+        this.gameInviteCallback = gameInviteCallback;
+    }
+
+    public void sendInvitation(final String user, final Callback1<Boolean> responseCallback){
+        try{
+            Message stanza = new Message();
+            stanza.setTo(user);
+
+            JSONObject json = new JSONObject();
+            json.put("type", "request");
+            json.put("body", "invite");
+
+            stanza.setBody(json.toString());
+            xmpp.conn.sendStanza(stanza);
+
+            xmpp.conn.addAsyncStanzaListener(new StanzaListener() {
+                @Override
+                public void processPacket(Stanza packet) throws SmackException.NotConnectedException {
+                    Message message = (Message) packet;
+
+                    if(parseFrom(message.getFrom()).equals(user)) {
+                        try {
+                            JSONObject json = new JSONObject(message.getBody());
+
+                            String type = json.get("type").toString();
+                            String body = json.get("body").toString();
+
+                            if (type.equals("response")) {
+                                responseCallback.onAction(body.equals("yes"));
+                                xmpp.conn.removeAsyncStanzaListener(this);
+                            }
+                        } catch (JSONException e) {
+                            e.printStackTrace();
+                        }
+                    }
+                }
+            }, StanzaTypeFilter.MESSAGE );
+        }
+        catch (JSONException e){
+            e.printStackTrace();
+        }
+        catch (SmackException.NotConnectedException e){
+            connectionCallback.onConnectionError(e.getMessage());
+        }
+    }
+
+    public void sendResponse(String user, String response){
+        try{
+            Message stanza = new Message();
+            stanza.setTo(user);
+
+            JSONObject json = new JSONObject();
+            json.put("type", "response");
+            json.put("body", response);
+
+            stanza.setBody(json.toString());
+            xmpp.conn.sendStanza(stanza);
+        }
+        catch (JSONException e){
+            //TODO
+        }
+        catch (SmackException.NotConnectedException e){
+            connectionCallback.onConnectionError(e.getMessage());
+        }
     }
 
     private String parseFrom(String from){
@@ -208,8 +283,6 @@ public class NetworkService extends Service {
                 callback.onConnectionError(exception.getMessage());
             else {
                 xmpp = handler;
-                connected = true;
-
                 callback.onSuccess();
             }
         }
@@ -234,7 +307,7 @@ public class NetworkService extends Service {
 
         private AbstractXMPPConnection conn;
         private Roster roster;
-        private SubscriptionListener subscriptionListener = null;
+        private Callback0 subscriptionListener = null;
 
         public XMPP(final String username, String password)
                 throws IOException, XMPPException, SmackException {
@@ -298,7 +371,7 @@ public class NetworkService extends Service {
                             try {
                                 roster.removeEntry(entry);
                                 if(subscriptionListener != null)
-                                    subscriptionListener.onSubscriptionChange();
+                                    subscriptionListener.onAction();
                             } catch (Exception e) {
                                 connectionCallback.onConnectionError(e.getMessage());
                             }
@@ -310,22 +383,30 @@ public class NetworkService extends Service {
                     @Override
                     public void processPacket(Stanza packet) throws SmackException.NotConnectedException {
                         if(subscriptionListener != null)
-                            subscriptionListener.onSubscriptionChange();
+                            subscriptionListener.onAction();
                     }
                 }, PresenceTypeFilter.SUBSCRIBED);
 
-                ChatManager chatManager = ChatManager.getInstanceFor(conn);
-                chatManager.addChatListener(
-                        new ChatManagerListener() {
-                            @Override
-                            public void chatCreated(Chat chat, boolean createdLocally) {
-                                if(!createdLocally) {
-                                    connectionCreatedCallback.
-                                            onConnectionCreated(new CommunicationManager(username,
-                                                    chat, connectionCallback));
-                                }
+                conn.addAsyncStanzaListener(new StanzaListener() {
+                    @Override
+                    public void processPacket(Stanza packet) throws SmackException.NotConnectedException {
+                        Message message = (Message) packet;
+
+                        try{
+                            JSONObject json = new JSONObject(message.getBody());
+
+                            String type = json.get("type").toString();
+                            String body = json.get("body").toString();
+
+                            if(type.equals("request") && body.equals("invite")){
+                                gameInviteCallback.onAction(parseFrom(message.getFrom()));
                             }
-                        });
+                        }
+                        catch (JSONException e){
+                            //TODO
+                        }
+                    }
+                }, StanzaTypeFilter.MESSAGE);
             }
         }
     }

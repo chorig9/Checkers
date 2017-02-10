@@ -1,7 +1,9 @@
 package edu.game.checkers.core;
 
+import android.app.Dialog;
 import android.content.ComponentName;
 import android.content.Context;
+import android.content.DialogInterface;
 import android.content.Intent;
 import android.content.ServiceConnection;
 import android.graphics.Color;
@@ -61,8 +63,16 @@ public class NetworkGameActivity extends GameActivity {
 
     @Override
     public void onBackPressed() {
-        super.onBackPressed();
-        endGame();
+        new AlertDialog(this).createQuestionDialog("Exit", "Do you want to exit?",
+                new DialogInterface.OnClickListener() {
+            @Override
+            public void onClick(DialogInterface dialog, int which) {
+                if(which == Dialog.BUTTON_POSITIVE){
+                    endGame();
+                    NetworkGameActivity.super.onBackPressed();
+                }
+            }
+        });
     }
 
     private void endGame() {
@@ -80,7 +90,7 @@ public class NetworkGameActivity extends GameActivity {
             networkService = binder.getService();
             bound = true;
 
-            manager = networkService.getCommunicationManager();
+
 
 
 //            networkService.startGame(new GameController() {
