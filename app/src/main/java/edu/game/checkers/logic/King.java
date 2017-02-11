@@ -72,7 +72,7 @@ public class King extends Piece{
         int range;
 
         if(!Board.isOptionEnabled(options, Board.flyingKing))
-            range = 1;
+            range = 2;
         else
             range = 7;
 
@@ -89,6 +89,7 @@ public class King extends Piece{
         return false;
     }
 
+    // Multiple - more than one (owner doesn't matter) or 1 piece of current player
     private enum PiecesOnWay {None, One, Multiple}
 
     private PiecesOnWay checkForPieces(Position target, Piece pieces[][])
