@@ -7,7 +7,7 @@ import android.content.DialogInterface;
 
 public class AlertDialog extends Dialog {
 
-    Activity activity;
+    private Activity activity;
 
     public AlertDialog(Context activity) {
         super(activity);
@@ -22,7 +22,7 @@ public class AlertDialog extends Dialog {
                 new DialogInterface.OnClickListener() {
                     public void onClick(DialogInterface dialog, int which) {
                         dialog.dismiss();
-                        (activity).finish();
+                        activity.finish();
                     }
                 });
         alertDialog.setOwnerActivity(activity);

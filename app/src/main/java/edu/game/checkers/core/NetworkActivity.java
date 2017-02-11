@@ -100,18 +100,7 @@ public class NetworkActivity extends AppCompatActivity {
                 editText.setText("");
             }
             else {
-                dialog.createQuestionDialog("Exit", "Do you want to exit?",
-                        new DialogInterface.OnClickListener() {
-                            @Override
-                            public void onClick(DialogInterface dialog, int which) {
-                                if(which == Dialog.BUTTON_POSITIVE){
-                                    NetworkActivity.super.onBackPressed();
-                                }
-                                else{
-                                    dialog.dismiss();
-                                }
-                            }
-                        });
+                super.onBackPressed();
             }
         }
         else
@@ -319,6 +308,7 @@ public class NetworkActivity extends AppCompatActivity {
                         public void run() {
                             element.setTag("enabled");
                             invitation.setText("");
+                            invitation.invalidate();
                             element.invalidate();
                         }
                     });

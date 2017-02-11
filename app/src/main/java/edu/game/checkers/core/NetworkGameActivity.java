@@ -148,7 +148,7 @@ public class NetworkGameActivity extends GameActivity {
     }
 
     private void endGame() {
-        //networkService.sendRequest(new Message(Message.EXIT_GAME));
+        manager.sendInfo("exit");
     }
 
     private void startGame(){
@@ -181,19 +181,26 @@ public class NetworkGameActivity extends GameActivity {
 
         @Override
         public void onAction(String request) {
-            if(request.equals("undo")){
-                dialog.createQuestionDialog("Undo move", "Player wants to undo move", new DialogInterface.OnClickListener() {
-                    @Override
-                    public void onClick(DialogInterface dialog, int which) {
-                        if(which == Dialog.BUTTON_POSITIVE) {
-                            manager.sendResponse("yes");
-                            NetworkGameActivity.super.undoMove(findViewById(R.id.undo_move));
+
+            switch(request){
+                case "undo":
+                    dialog.createQuestionDialog("Undo move", "Player wants to undo move", new DialogInterface.OnClickListener() {
+                        @Override
+                        public void onClick(DialogInterface dialog, int which) {
+                            if(which == Dialog.BUTTON_POSITIVE) {
+                                manager.sendResponse("yes");
+                                NetworkGameActivity.super.undoMove(findViewById(R.id.undo_move));
+                            }
+                            else{
+                                manager.sendResponse("no");
+                            }
                         }
-                        else{
-                            manager.sendResponse("no");
-                        }
-                    }
-                });
+                    });
+                    break;
+                case "exit":
+                    manager.end();
+                    dialog.createExitDialog("Exit", "Other player has disconnected");
+                    break;
             }
         }
     }
@@ -207,6 +214,7 @@ public class NetworkGameActivity extends GameActivity {
             if(board.getCurrentPlayer() != localPlayer){
                 board.clicked(moveStruct.first, false);
                 board.clicked(moveStruct.second, false);
+                boardView.postInvalidate();
             }
         }
     }

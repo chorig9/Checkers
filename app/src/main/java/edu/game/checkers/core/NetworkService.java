@@ -47,8 +47,6 @@ public class NetworkService extends Service {
     private final static String HOST = "89.40.127.125";
     private final static String SERVICE_NAME = "example.com";
 
-    private String jid;
-
     private XMPP xmpp;
     private ConnectionCallback connectionCallback = null;
     private Callback1<String> gameInviteCallback = null;
@@ -66,7 +64,6 @@ public class NetworkService extends Service {
     public void connectToServer(String username, String password, ConnectionCallback callback)
     {
         this.connectionCallback = callback;
-        this.jid = toJid(username);
         new ConnectToServerTask(callback).execute(username, password);
     }
 
@@ -104,23 +101,6 @@ public class NetworkService extends Service {
             connectionCallback.onConnectionError(e.getMessage());
         }
     }
-
-//    public void startConnection(String to){
-//        ChatManager manager = ChatManager.getInstanceFor(xmpp.conn);
-//        manager.createChat(toJid(to));
-//    }
-//
-//    public void listenForConnection(final Callback1<CommunicationManager> callback){
-//        ChatManager chatManager = ChatManager.getInstanceFor(xmpp.conn);
-//        chatManager.addChatListener(
-//                new ChatManagerListener() {
-//                    @Override
-//                    public void chatCreated(Chat chat, boolean createdLocally) {
-//                        callback.onAction(new CommunicationManager(jid,
-//                                chat, connectionCallback));
-//                    }
-//                });
-//    }
 
     public CommunicationManager getCommunicationManager(String to){
         return new CommunicationManager(toJid(to), xmpp.conn, connectionCallback);

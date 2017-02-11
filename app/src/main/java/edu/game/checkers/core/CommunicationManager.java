@@ -21,11 +21,8 @@ public class CommunicationManager {
 
     private XMPPConnection conn;
     private ConnectionCallback connectionCallback;
-
+    private StanzaListener stanzaListener;
     private String otherName;
-    private static int IdCounter = 0;
-
-    private volatile boolean inGame = false;
     private Queue<Callback1<String>> responseQueue = new ArrayBlockingQueue<>(10);
 
     public CommunicationManager(String to, XMPPConnection conn, ConnectionCallback connectionCallback){
@@ -35,7 +32,7 @@ public class CommunicationManager {
     }
 
     public void setCallbacks(final Callback1<String> requestCallback, final Callback1<String> gameCallback){
-        conn.addAsyncStanzaListener(new StanzaListener() {
+        stanzaListener = new StanzaListener() {
             @Override
             public void processPacket(Stanza packet) throws SmackException.NotConnectedException {
                 Message message = (Message) packet;
@@ -62,51 +59,58 @@ public class CommunicationManager {
                     //TODO
                 }
             }
-        }, StanzaTypeFilter.MESSAGE);
+        };
+
+        conn.addAsyncStanzaListener(stanzaListener, StanzaTypeFilter.MESSAGE);
     }
 
-    public void sendResponse(String message){
+    // send response to a request
+    public void sendResponse(String response){
         try {
-            JSONObject json = new JSONObject();
-            json.put("body", message);
-            json.put("type", "response");
-
-            Message stanza = new Message();
-            stanza.setTo(otherName);
-            stanza.setBody(json.toString());
-            conn.sendStanza(stanza);
-        } catch (JSONException e){
-            //TODO
-        }
-        catch (SmackException.NotConnectedException e){
-            connectionCallback.onConnectionError(e.getMessage());
-        }
-    }
-
-    public void sendRequest(String message, Callback1<String> callback){
-        try {
-            JSONObject json = new JSONObject();
-            json.put("body", message);
-            json.put("type", "request");
-
-            responseQueue.add(callback);
-
-            Message stanza = new Message();
-            stanza.setTo(otherName);
-            stanza.setBody(json.toString());
-            conn.sendStanza(stanza);
+            sendMessage(response, "response");
         } catch (SmackException.NotConnectedException e) {
             connectionCallback.onConnectionError(e.getMessage());
-        } catch (JSONException e){
-            //TODO
         }
     }
 
+    // send request and excpect response
+    public void sendRequest(String message, Callback1<String> callback){
+        try {
+            sendMessage(message, "request");
+            responseQueue.add(callback);
+        } catch (SmackException.NotConnectedException e) {
+            connectionCallback.onConnectionError(e.getMessage());
+        }
+    }
+
+    // send game move
     public void sendMove(String move){
         try {
+            sendMessage(move, "game");
+        } catch (SmackException.NotConnectedException e) {
+            connectionCallback.onConnectionError(e.getMessage());
+        }
+    }
+
+    // send request and dont excpect response
+    public void sendInfo(String info){
+        try {
+            sendMessage(info, "request");
+        } catch (SmackException.NotConnectedException e) {
+            connectionCallback.onConnectionError(e.getMessage());
+        }
+    }
+
+    // MUST be called when connection is being closed
+    public void end(){
+        conn.removeAsyncStanzaListener(stanzaListener);
+    }
+
+    private void sendMessage(String body, String type) throws SmackException.NotConnectedException {
+        try {
             JSONObject json = new JSONObject();
-            json.put("body", move);
-            json.put("type", "game");
+            json.put("body", body);
+            json.put("type", type);
 
             Message stanza = new Message();
             stanza.setTo(otherName);
@@ -115,9 +119,5 @@ public class CommunicationManager {
         } catch (JSONException e){
             //TODO
         }
-        catch (SmackException.NotConnectedException e){
-            connectionCallback.onConnectionError(e.getMessage());
-        }
     }
-
 }
