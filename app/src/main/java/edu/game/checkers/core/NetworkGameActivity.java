@@ -29,7 +29,6 @@ public class NetworkGameActivity extends GameActivity {
     boolean bound = false;
     volatile boolean active = false;
 
-    private boolean initializeLocal;
     private String otherPlayer;
 
     @Override
@@ -40,10 +39,10 @@ public class NetworkGameActivity extends GameActivity {
         Bundle bundle = getIntent().getExtras();
 
         TextView title = (TextView) findViewById(R.id.name_header);
-        String header = getString(R.string.name_header) + bundle.getString("name");
+        otherPlayer = bundle.getString("name");
         options = bundle.getInt("options", 0);
-        initializeLocal = bundle.getBoolean("local", true);
 
+        String header = getString(R.string.name_header) + otherPlayer;
         title.setText(header);
     }
 
@@ -85,36 +84,7 @@ public class NetworkGameActivity extends GameActivity {
     }
 
     private void startGame(){
-
-    }
-
-    /** Defines callbacks for service binding, passed to bindService() */
-    private ServiceConnection connection = new ServiceConnection() {
-
-        @Override
-        public void onServiceConnected(ComponentName className,
-                                       IBinder service) {
-            // We've bound to NetworkService, cast the IBinder and get NetworkService instance
-            NetworkService.NetworkBinder binder = (NetworkService.NetworkBinder) service;
-            networkService = binder.getService();
-            bound = true;
-
-            // callback for chat creation (locally or not)
-            networkService.listenForConnection(new Callback1<CommunicationManager>() {
-                @Override
-                public void onAction(CommunicationManager param) {
-                    manager = param;
-                    startGame();
-                }
-            });
-
-            // if this host is responsible for initializing connection
-            if(initializeLocal){
-                networkService.startConnection(otherPlayer);
-            }
-
-
-//            networkService.startGame(new GameController() {
+        //            networkService.startGame(new GameController() {
 //                @Override
 //                public void onMessage(Message message) {
 //                    switch (message.getCode()){
@@ -155,6 +125,29 @@ public class NetworkGameActivity extends GameActivity {
 //                    }
 //                }
 //            });
+    }
+
+    /** Defines callbacks for service binding, passed to bindService() */
+    private ServiceConnection connection = new ServiceConnection() {
+
+        @Override
+        public void onServiceConnected(ComponentName className,
+                                       IBinder service) {
+            // We've bound to NetworkService, cast the IBinder and get NetworkService instance
+            NetworkService.NetworkBinder binder = (NetworkService.NetworkBinder) service;
+            networkService = binder.getService();
+            bound = true;
+
+            manager = networkService.getCommunicationManager(otherPlayer);
+
+            manager.setRequestCallback(new Callback1<String>() {
+                @Override
+                public void onAction(String param) {
+                    // TODO
+                }
+            });
+
+            startGame();
         }
 
         @Override

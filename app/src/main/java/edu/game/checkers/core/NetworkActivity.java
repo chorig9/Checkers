@@ -196,7 +196,7 @@ public class NetworkActivity extends AppCompatActivity {
                                         networkService.sendResponse(user, "yes");
 
                                         // take other's player options, other player is initializing connection
-                                        startGame(Integer.valueOf(otherPlayer.info), user, false);
+                                        startGame(Integer.valueOf(otherPlayer.info), user);
                                     }
                                 }
                             }
@@ -327,18 +327,17 @@ public class NetworkActivity extends AppCompatActivity {
                     int options = preferences.getInt("options", 0);
                     if(accepted){
                         // this host is initializing connection
-                        startGame(options, name, true);
+                        startGame(options, name);
                     }
                 }
             });
         }
     }
 
-    private void startGame(int options, String username, boolean initializeLocal){
+    private void startGame(int options, String username){
         Intent intent = new Intent(NetworkActivity.this, NetworkGameActivity.class);
         intent.putExtra("options", options);
         intent.putExtra("name", username);
-        intent.putExtra("local", initializeLocal);
 
         startActivity(intent);
     }

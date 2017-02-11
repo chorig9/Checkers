@@ -1,9 +1,13 @@
 package edu.game.checkers.core;
 
 import org.jivesoftware.smack.SmackException;
+import org.jivesoftware.smack.StanzaListener;
+import org.jivesoftware.smack.XMPPConnection;
 import org.jivesoftware.smack.chat.Chat;
 import org.jivesoftware.smack.chat.ChatMessageListener;
+import org.jivesoftware.smack.filter.StanzaTypeFilter;
 import org.jivesoftware.smack.packet.Message;
+import org.jivesoftware.smack.packet.Stanza;
 import org.json.JSONException;
 import org.json.JSONObject;
 
@@ -15,25 +19,29 @@ import edu.game.checkers.core.callbacks.ConnectionCallback;
 
 public class CommunicationManager {
 
-    private Chat chat;
+    private XMPPConnection conn;
     private ConnectionCallback connectionCallback;
 
     private String localName;
+    private String otherName;
     private static int IdCounter = 0;
 
     private volatile boolean inGame = false;
     private Queue<Callback1<String>> responseQueue = new ArrayBlockingQueue<>(10);
 
-    public CommunicationManager(String localName, Chat chat, ConnectionCallback connectionCallback){
-        this.chat = chat;
+    public CommunicationManager(String localName, String to,
+                                XMPPConnection conn, ConnectionCallback connectionCallback){
+        this.conn = conn;
         this.localName = localName;
+        this.otherName = to;
         this.connectionCallback = connectionCallback;
     }
 
-    public void acceptConnection(final Callback1<String> requestCallback){
-        chat.addMessageListener(new ChatMessageListener() {
+    public void setRequestCallback(final Callback1<String> requestCallback){
+        conn.addAsyncStanzaListener(new StanzaListener() {
             @Override
-            public void processMessage(Chat chat, Message message) {
+            public void processPacket(Stanza packet) throws SmackException.NotConnectedException {
+                Message message = (Message) packet;
                 try {
                     JSONObject json = new JSONObject(message.getBody());
 
@@ -57,16 +65,19 @@ public class CommunicationManager {
                     //TODO
                 }
             }
-        });
+        }, StanzaTypeFilter.MESSAGE);
     }
 
-    public void sendResponse(String responseId, String message){
+    public void sendResponse(String message){
         try {
             JSONObject json = new JSONObject();
             json.put("body", message);
             json.put("type", "response");
 
-            chat.sendMessage(json.toString());
+            Message stanza = new Message();
+            stanza.setTo(otherName);
+            stanza.setBody(json.toString());
+            conn.sendStanza(stanza);
         } catch (JSONException e){
             //TODO
         }
@@ -80,13 +91,15 @@ public class CommunicationManager {
             String id = nextId();
 
             JSONObject json = new JSONObject();
-            json.put("id", id);
             json.put("body", message);
             json.put("type", "request");
 
             responseQueue.add(callback);
 
-            chat.sendMessage(json.toString());
+            Message stanza = new Message();
+            stanza.setTo(otherName);
+            stanza.setBody(json.toString());
+            conn.sendStanza(stanza);
         } catch (SmackException.NotConnectedException e) {
             connectionCallback.onConnectionError(e.getMessage());
         } catch (JSONException e){
@@ -95,8 +108,7 @@ public class CommunicationManager {
     }
 
     public String getOtherName(){
-        String jid = chat.getParticipant();
-        return jid.substring(0, jid.indexOf("@"));
+        return otherName.substring(0, otherName.indexOf("@"));
     }
 
     private String nextId(){

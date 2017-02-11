@@ -105,21 +105,25 @@ public class NetworkService extends Service {
         }
     }
 
-    public void startConnection(String to){
-        ChatManager manager = ChatManager.getInstanceFor(xmpp.conn);
-        manager.createChat(toJid(to));
-    }
+//    public void startConnection(String to){
+//        ChatManager manager = ChatManager.getInstanceFor(xmpp.conn);
+//        manager.createChat(toJid(to));
+//    }
+//
+//    public void listenForConnection(final Callback1<CommunicationManager> callback){
+//        ChatManager chatManager = ChatManager.getInstanceFor(xmpp.conn);
+//        chatManager.addChatListener(
+//                new ChatManagerListener() {
+//                    @Override
+//                    public void chatCreated(Chat chat, boolean createdLocally) {
+//                        callback.onAction(new CommunicationManager(jid,
+//                                chat, connectionCallback));
+//                    }
+//                });
+//    }
 
-    public void listenForConnection(final Callback1<CommunicationManager> callback){
-        ChatManager chatManager = ChatManager.getInstanceFor(xmpp.conn);
-        chatManager.addChatListener(
-                new ChatManagerListener() {
-                    @Override
-                    public void chatCreated(Chat chat, boolean createdLocally) {
-                        callback.onAction(new CommunicationManager(jid,
-                                chat, connectionCallback));
-                    }
-                });
+    public CommunicationManager getCommunicationManager(String to){
+        return new CommunicationManager(jid, toJid(to), xmpp.conn, connectionCallback);
     }
 
     public Collection<Friend> getFriendsList() {
