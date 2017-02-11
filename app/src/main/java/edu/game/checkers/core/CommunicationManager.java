@@ -95,7 +95,8 @@ public class CommunicationManager {
     }
 
     public String getOtherName(){
-        return chat.getParticipant();
+        String jid = chat.getParticipant();
+        return jid.substring(0, jid.indexOf("@"));
     }
 
     private String nextId(){

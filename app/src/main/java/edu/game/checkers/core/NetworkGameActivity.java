@@ -15,6 +15,7 @@ import android.view.View;
 import android.widget.TextView;
 
 import edu.board.checkers.R;
+import edu.game.checkers.core.callbacks.Callback1;
 import edu.game.checkers.logic.Board;
 import edu.game.checkers.logic.Position;
 
@@ -28,6 +29,9 @@ public class NetworkGameActivity extends GameActivity {
     boolean bound = false;
     volatile boolean active = false;
 
+    private boolean initializeLocal;
+    private String otherPlayer;
+
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
@@ -38,6 +42,7 @@ public class NetworkGameActivity extends GameActivity {
         TextView title = (TextView) findViewById(R.id.name_header);
         String header = getString(R.string.name_header) + bundle.getString("name");
         options = bundle.getInt("options", 0);
+        initializeLocal = bundle.getBoolean("local", true);
 
         title.setText(header);
     }
@@ -79,6 +84,10 @@ public class NetworkGameActivity extends GameActivity {
         //networkService.sendRequest(new Message(Message.EXIT_GAME));
     }
 
+    private void startGame(){
+
+    }
+
     /** Defines callbacks for service binding, passed to bindService() */
     private ServiceConnection connection = new ServiceConnection() {
 
@@ -90,7 +99,19 @@ public class NetworkGameActivity extends GameActivity {
             networkService = binder.getService();
             bound = true;
 
+            // callback for chat creation (locally or not)
+            networkService.listenForConnection(new Callback1<CommunicationManager>() {
+                @Override
+                public void onAction(CommunicationManager param) {
+                    manager = param;
+                    startGame();
+                }
+            });
 
+            // if this host is responsible for initializing connection
+            if(initializeLocal){
+                networkService.startConnection(otherPlayer);
+            }
 
 
 //            networkService.startGame(new GameController() {

@@ -26,6 +26,7 @@ import android.widget.Button;
 import android.widget.EditText;
 import android.widget.LinearLayout;
 import android.widget.ListView;
+import android.widget.RelativeLayout;
 import android.widget.TextView;
 import android.os.Handler;
 import java.util.ArrayList;
@@ -194,8 +195,8 @@ public class NetworkActivity extends AppCompatActivity {
                                     else {
                                         networkService.sendResponse(user, "yes");
 
-                                        // take other's player options
-                                        startGame(Integer.valueOf(otherPlayer.info), user);
+                                        // take other's player options, other player is initializing connection
+                                        startGame(Integer.valueOf(otherPlayer.info), user, false);
                                     }
                                 }
                             }
@@ -300,13 +301,14 @@ public class NetworkActivity extends AppCompatActivity {
     }
 
     public void invitePlayer(View view) {
-        final LinearLayout element = (LinearLayout) view;
-        TextView textView = (TextView) element.getChildAt(0);
-        final String name = textView.getText().toString();
+        final RelativeLayout element = (RelativeLayout) view;
+        TextView nameView = (TextView) element.getChildAt(0);
+        final TextView invitation = (TextView) element.getChildAt(1);
+        final String name = nameView.getText().toString();
 
-        if(element.getTag() == null || !element.getTag().equals("invited")){
-            element.setTag("invited");
-            element.setBackgroundColor(Color.GRAY);
+        if(element.getTag() == null || !element.getTag().equals("disabled")){
+            element.setTag("disabled");
+            invitation.setText(R.string.invited);
             networkService.sendInvitation(name, new Callback1<Boolean>() {
                 @Override
                 public void onAction(Boolean accepted) {
@@ -314,8 +316,8 @@ public class NetworkActivity extends AppCompatActivity {
                     listView.post(new Runnable() {
                         @Override
                         public void run() {
-                            element.setTag("");
-                            element.setBackgroundColor(Color.WHITE);
+                            element.setTag("enabled");
+                            invitation.setText("");
                             element.invalidate();
                         }
                     });
@@ -324,17 +326,19 @@ public class NetworkActivity extends AppCompatActivity {
                             MODE_PRIVATE);
                     int options = preferences.getInt("options", 0);
                     if(accepted){
-                        startGame(options, name);
+                        // this host is initializing connection
+                        startGame(options, name, true);
                     }
                 }
             });
         }
     }
 
-    private void startGame(int options, String username){
+    private void startGame(int options, String username, boolean initializeLocal){
         Intent intent = new Intent(NetworkActivity.this, NetworkGameActivity.class);
         intent.putExtra("options", options);
         intent.putExtra("name", username);
+        intent.putExtra("local", initializeLocal);
 
         startActivity(intent);
     }
@@ -415,10 +419,14 @@ public class NetworkActivity extends AppCompatActivity {
                     status.setTextColor(Color.BLACK);
                 }
 
-                if(friend.status.equals("available"))
-                    name.setBackgroundColor(Color.GREEN);
-                else
-                    name.setBackgroundColor(Color.RED);
+                if(friend.status.equals("available")) {
+                    convertView.setBackgroundColor(Color.GREEN);
+                    convertView.setTag("enabled");
+                }
+                else {
+                    convertView.setBackgroundColor(Color.RED);
+                    convertView.setTag("disabled");
+                }
 
                 status.setText(friend.info);
             }

@@ -47,7 +47,7 @@ public class NetworkService extends Service {
     private final static String HOST = "89.40.127.125";
     private final static String SERVICE_NAME = "example.com";
 
-    private String username;
+    private String jid;
 
     private XMPP xmpp;
     private ConnectionCallback connectionCallback = null;
@@ -66,34 +66,27 @@ public class NetworkService extends Service {
     public void connectToServer(String username, String password, ConnectionCallback callback)
     {
         this.connectionCallback = callback;
-        this.username = username;
+        this.jid = toJid(username);
         new ConnectToServerTask(callback).execute(username, password);
-    }
-
-    public CommunicationManager startConnectionTo(String user){
-        ChatManager chatManager = ChatManager.getInstanceFor(xmpp.conn);
-        Chat chat = chatManager.createChat(user);
-
-        return new CommunicationManager(this.username, chat, connectionCallback);
     }
 
     public void subscribeUser(final String username, final Callback1<Boolean> callback){
         try{
             Presence subscribe = new Presence(Presence.Type.subscribe);
-            subscribe.setTo(username);
+            subscribe.setTo(toJid(username));
             xmpp.conn.sendStanza(subscribe);
 
             xmpp.conn.addAsyncStanzaListener(new StanzaListener() {
                 @Override
                 public void processPacket(Stanza packet) throws SmackException.NotConnectedException {
-                    if(parseFrom(packet.getFrom()).equals(username))
+                    if(toUsername(packet.getFrom()).equals(username))
                         callback.onAction(true);
                 }
             }, PresenceTypeFilter.SUBSCRIBED);
             xmpp.conn.addAsyncStanzaListener(new StanzaListener() {
                 @Override
                 public void processPacket(Stanza packet) throws SmackException.NotConnectedException {
-                    if(parseFrom(packet.getFrom()).equals(username))
+                    if(toUsername(packet.getFrom()).equals(username))
                         callback.onAction(false);
                 }
             }, PresenceTypeFilter.UNSUBSCRIBED);
@@ -105,18 +98,16 @@ public class NetworkService extends Service {
 
     public void unsubscribeUser(String username){
         try {
-            RosterEntry entry = xmpp.roster.getEntry(username);
+            RosterEntry entry = xmpp.roster.getEntry(toJid(username));
             xmpp.roster.removeEntry(entry);
         } catch(Exception e){
             connectionCallback.onConnectionError(e.getMessage());
         }
     }
 
-    public CommunicationManager startConnection(String to){
+    public void startConnection(String to){
         ChatManager manager = ChatManager.getInstanceFor(xmpp.conn);
-        Chat chat = manager.createChat(to);
-
-        return new CommunicationManager(username, chat, connectionCallback);
+        manager.createChat(toJid(to));
     }
 
     public void listenForConnection(final Callback1<CommunicationManager> callback){
@@ -125,10 +116,8 @@ public class NetworkService extends Service {
                 new ChatManagerListener() {
                     @Override
                     public void chatCreated(Chat chat, boolean createdLocally) {
-                        if(!createdLocally) {
-                            callback.onAction(new CommunicationManager(username,
-                                            chat, connectionCallback));
-                        }
+                        callback.onAction(new CommunicationManager(jid,
+                                chat, connectionCallback));
                     }
                 });
     }
@@ -142,7 +131,7 @@ public class NetworkService extends Service {
             Collection<Friend> users = new ArrayList<>();
             for(RosterEntry entry : entries){
                 Presence presence = xmpp.roster.getPresence(entry.getUser());
-                Friend friend = new Friend(entry.getUser(), presence.getType().name(), presence.getStatus());
+                Friend friend = new Friend(toUsername(entry.getUser()), presence.getType().name(), presence.getStatus());
                 friend.accepted = xmpp.roster.isSubscribedToMyPresence(entry.getUser());
 
                 users.add(friend);
@@ -164,8 +153,8 @@ public class NetworkService extends Service {
 
             @Override
             public void presenceChanged(Presence presence) {
-                String jid = parseFrom(presence.getFrom());
-                listener.onAction(jid, presence.getType().name(), presence.getStatus());
+                String username = toUsername(presence.getFrom());
+                listener.onAction(username, presence.getType().name(), presence.getStatus());
             }
         });
     }
@@ -181,7 +170,7 @@ public class NetworkService extends Service {
     public void sendInvitation(final String user, final Callback1<Boolean> responseCallback){
         try{
             Message stanza = new Message();
-            stanza.setTo(user);
+            stanza.setTo(toJid(user));
 
             JSONObject json = new JSONObject();
             json.put("type", "request");
@@ -195,7 +184,7 @@ public class NetworkService extends Service {
                 public void processPacket(Stanza packet) throws SmackException.NotConnectedException {
                     Message message = (Message) packet;
 
-                    if(parseFrom(message.getFrom()).equals(user)) {
+                    if(toUsername(message.getFrom()).equals(user)) {
                         try {
                             JSONObject json = new JSONObject(message.getBody());
 
@@ -224,7 +213,7 @@ public class NetworkService extends Service {
     public void sendResponse(String user, String response){
         try{
             Message stanza = new Message();
-            stanza.setTo(user);
+            stanza.setTo(toJid(user));
 
             JSONObject json = new JSONObject();
             json.put("type", "response");
@@ -241,9 +230,13 @@ public class NetworkService extends Service {
         }
     }
 
-    private String parseFrom(String from){
-        int index = from.indexOf(SERVICE_NAME);
-        return from.substring(0, index + SERVICE_NAME.length());
+    private String toUsername(String jid){
+        int index = jid.indexOf(SERVICE_NAME);
+        return jid.substring(0, index - 1);
+    }
+
+    private String toJid(String username) {
+        return username + "@" + SERVICE_NAME;
     }
 
     public class NetworkBinder extends Binder {
@@ -399,7 +392,7 @@ public class NetworkService extends Service {
                             String body = json.get("body").toString();
 
                             if(type.equals("request") && body.equals("invite")){
-                                gameInviteCallback.onAction(parseFrom(message.getFrom()));
+                                gameInviteCallback.onAction(toUsername(message.getFrom()));
                             }
                         }
                         catch (JSONException e){
