@@ -37,7 +37,7 @@ public class CommunicationManager {
         this.connectionCallback = connectionCallback;
     }
 
-    public void setRequestCallback(final Callback1<String> requestCallback){
+    public void setCallbacks(final Callback1<String> requestCallback, final Callback1<String> gameCallback){
         conn.addAsyncStanzaListener(new StanzaListener() {
             @Override
             public void processPacket(Stanza packet) throws SmackException.NotConnectedException {
@@ -58,7 +58,7 @@ public class CommunicationManager {
                             requestCallback.onAction(body);
                             break;
                         case "game":
-                            //TODO
+                            gameCallback.onAction(body);
                             break;
                     }
                 } catch (JSONException e) {
@@ -104,6 +104,24 @@ public class CommunicationManager {
             connectionCallback.onConnectionError(e.getMessage());
         } catch (JSONException e){
             //TODO
+        }
+    }
+
+    public void sendMove(String move){
+        try {
+            JSONObject json = new JSONObject();
+            json.put("body", move);
+            json.put("type", "game");
+
+            Message stanza = new Message();
+            stanza.setTo(otherName);
+            stanza.setBody(json.toString());
+            conn.sendStanza(stanza);
+        } catch (JSONException e){
+            //TODO
+        }
+        catch (SmackException.NotConnectedException e){
+            connectionCallback.onConnectionError(e.getMessage());
         }
     }
 
