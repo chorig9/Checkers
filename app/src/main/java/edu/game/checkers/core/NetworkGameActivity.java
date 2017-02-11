@@ -9,11 +9,11 @@ import android.content.ServiceConnection;
 import android.graphics.Color;
 import android.os.Bundle;
 import android.os.IBinder;
-import android.os.Handler;
 import android.support.v4.util.Pair;
 import android.view.MotionEvent;
 import android.view.View;
 import android.widget.TextView;
+import android.os.Handler;
 
 import org.json.JSONException;
 import org.json.JSONObject;
@@ -28,6 +28,8 @@ public class NetworkGameActivity extends GameActivity {
     private Board.Player localPlayer;
     private CommunicationManager manager;
 
+    private PostAlertDialog dialog;
+    private Handler handler;
     NetworkService networkService;
     boolean bound = false;
     volatile boolean active = false;
@@ -56,6 +58,9 @@ public class NetworkGameActivity extends GameActivity {
 
         String header = getString(R.string.name_header) + otherPlayer;
         title.setText(header);
+
+        handler = new Handler();
+        dialog = new PostAlertDialog(this, handler);
     }
 
     @Override
@@ -96,6 +101,9 @@ public class NetworkGameActivity extends GameActivity {
         return new TouchManager(){
             @Override
             public boolean onTouch(View v, MotionEvent event) {
+                if(board.getCurrentPlayer() != localPlayer)
+                    return true;
+
                 Position position = calculatePosition(v, event);
 
                 if(position == null)
@@ -103,7 +111,7 @@ public class NetworkGameActivity extends GameActivity {
 
                 Position prevPosition = null;
                 if(board.getSelectedPiece() != null)
-                    prevPosition = board.getSelectedPiece().getPosition();
+                    prevPosition = board.getSelectedPiece().getPosition().copy();
 
                 Board.ClickResult result = board.clicked(position, true);
 
@@ -120,12 +128,23 @@ public class NetworkGameActivity extends GameActivity {
     }
 
     @Override
-    public void undoMove(View view)
+    public void undoMove(final View view)
     {
-        //  board.undoMove();
-//          boardView.setPieces(board.getPieces());
-//          boardView.postInvalidate();
-        // super.undoMove(view);
+        manager.sendRequest("undo", new Callback1<String>() {
+            @Override
+            public void onAction(String response) {
+                if(response.equals("yes")) {
+                    handler.post(new Runnable() {
+                        @Override
+                        public void run() {
+                            NetworkGameActivity.super.undoMove(view);
+                        }
+                    });
+                }
+                else
+                    dialog.createInfoDialog("Undo request response", "Player didn't agree");
+            }
+        });
     }
 
     private void endGame() {
@@ -133,13 +152,6 @@ public class NetworkGameActivity extends GameActivity {
     }
 
     private void startGame(){
-//        tring player = message.getArguments().get(0);
-//                            if(player.equals(Message.PLAYER_BLACK)) {
-//                                localPlayer = Board.Player.BLACK;
-//                                boardView.rotate();
-//                            }
-//                            else
-//                                localPlayer = Board.Player.WHITE;
     }
 
     /** Defines callbacks for service binding, passed to bindService() */
@@ -169,7 +181,20 @@ public class NetworkGameActivity extends GameActivity {
 
         @Override
         public void onAction(String request) {
-            //TODO
+            if(request.equals("undo")){
+                dialog.createQuestionDialog("Undo move", "Player wants to undo move", new DialogInterface.OnClickListener() {
+                    @Override
+                    public void onClick(DialogInterface dialog, int which) {
+                        if(which == Dialog.BUTTON_POSITIVE) {
+                            manager.sendResponse("yes");
+                            NetworkGameActivity.super.undoMove(findViewById(R.id.undo_move));
+                        }
+                        else{
+                            manager.sendResponse("no");
+                        }
+                    }
+                });
+            }
         }
     }
 

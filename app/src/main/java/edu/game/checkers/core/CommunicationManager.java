@@ -22,17 +22,14 @@ public class CommunicationManager {
     private XMPPConnection conn;
     private ConnectionCallback connectionCallback;
 
-    private String localName;
     private String otherName;
     private static int IdCounter = 0;
 
     private volatile boolean inGame = false;
     private Queue<Callback1<String>> responseQueue = new ArrayBlockingQueue<>(10);
 
-    public CommunicationManager(String localName, String to,
-                                XMPPConnection conn, ConnectionCallback connectionCallback){
+    public CommunicationManager(String to, XMPPConnection conn, ConnectionCallback connectionCallback){
         this.conn = conn;
-        this.localName = localName;
         this.otherName = to;
         this.connectionCallback = connectionCallback;
     }
@@ -88,8 +85,6 @@ public class CommunicationManager {
 
     public void sendRequest(String message, Callback1<String> callback){
         try {
-            String id = nextId();
-
             JSONObject json = new JSONObject();
             json.put("body", message);
             json.put("type", "request");
@@ -123,15 +118,6 @@ public class CommunicationManager {
         catch (SmackException.NotConnectedException e){
             connectionCallback.onConnectionError(e.getMessage());
         }
-    }
-
-    public String getOtherName(){
-        return otherName.substring(0, otherName.indexOf("@"));
-    }
-
-    private String nextId(){
-        IdCounter = (IdCounter + 1) % Integer.MAX_VALUE;
-        return localName + Integer.toString(IdCounter);
     }
 
 }

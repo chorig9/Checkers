@@ -123,7 +123,7 @@ public class NetworkService extends Service {
 //    }
 
     public CommunicationManager getCommunicationManager(String to){
-        return new CommunicationManager(jid, toJid(to), xmpp.conn, connectionCallback);
+        return new CommunicationManager(toJid(to), xmpp.conn, connectionCallback);
     }
 
     public Collection<Friend> getFriendsList() {
