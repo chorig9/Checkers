@@ -2,6 +2,7 @@ package edu.game.checkers.core;
 
 import android.app.Service;
 import android.content.Intent;
+import android.content.SharedPreferences;
 import android.os.AsyncTask;
 import android.os.Binder;
 import android.os.IBinder;
@@ -11,9 +12,6 @@ import org.jivesoftware.smack.ConnectionConfiguration;
 import org.jivesoftware.smack.SmackException;
 import org.jivesoftware.smack.StanzaListener;
 import org.jivesoftware.smack.XMPPException;
-import org.jivesoftware.smack.chat.Chat;
-import org.jivesoftware.smack.chat.ChatManager;
-import org.jivesoftware.smack.chat.ChatManagerListener;
 import org.jivesoftware.smack.filter.PresenceTypeFilter;
 import org.jivesoftware.smack.filter.StanzaTypeFilter;
 import org.jivesoftware.smack.packet.Message;
@@ -38,18 +36,25 @@ import edu.game.checkers.core.callbacks.Callback1;
 import edu.game.checkers.core.callbacks.Callback3;
 import edu.game.checkers.core.callbacks.ConnectionCallback;
 
+import static edu.game.checkers.core.OptionsActivity.DEFAULT_HOSTNAME;
+import static edu.game.checkers.core.OptionsActivity.DEFAULT_IP;
+import static edu.game.checkers.core.OptionsActivity.DEFAULT_PORT;
+import static edu.game.checkers.core.OptionsActivity.HOSTNAME_KEY;
+import static edu.game.checkers.core.OptionsActivity.IP_ADDRESS_KEY;
+import static edu.game.checkers.core.OptionsActivity.OPTIONS_FILE;
+import static edu.game.checkers.core.OptionsActivity.PORT_KEY;
+
 
 public class NetworkService extends Service {
 
     private final IBinder binder = new NetworkBinder();
 
-    private final static int PORT = 5222;
-    private final static String HOST = "89.40.127.125";
-    private final static String SERVICE_NAME = "example.com";
-
     private XMPP xmpp;
     private ConnectionCallback connectionCallback = null;
     private Callback1<String> gameInviteCallback = null;
+
+    private String hostname, ipAddress;
+    private int port;
 
     @Override
     public void onDestroy() {
@@ -63,6 +68,7 @@ public class NetworkService extends Service {
 
     public void connectToServer(String username, String password, ConnectionCallback callback)
     {
+        loadConfig();
         this.connectionCallback = callback;
         new ConnectToServerTask(callback).execute(username, password);
     }
@@ -215,12 +221,12 @@ public class NetworkService extends Service {
     }
 
     private String toUsername(String jid){
-        int index = jid.indexOf(SERVICE_NAME);
+        int index = jid.indexOf(hostname);
         return jid.substring(0, index - 1);
     }
 
     private String toJid(String username) {
-        return username + "@" + SERVICE_NAME;
+        return username + "@" + hostname;
     }
 
     public class NetworkBinder extends Binder {
@@ -228,6 +234,13 @@ public class NetworkService extends Service {
             // Return this instance of NetworkService so clients can call public methods
             return NetworkService.this;
         }
+    }
+
+    private void loadConfig(){
+        SharedPreferences preferences = getSharedPreferences(OPTIONS_FILE, MODE_PRIVATE);
+        hostname = preferences.getString(HOSTNAME_KEY, DEFAULT_HOSTNAME);
+        ipAddress = preferences.getString(IP_ADDRESS_KEY, DEFAULT_IP);
+        port = preferences.getInt(PORT_KEY, DEFAULT_PORT);
     }
 
     /*
@@ -291,10 +304,10 @@ public class NetworkService extends Service {
 
             XMPPTCPConnectionConfiguration config = XMPPTCPConnectionConfiguration.builder()
                     .setUsernameAndPassword(username, password)
-                    .setHost(HOST)
+                    .setHost(ipAddress)
                     .setSecurityMode(ConnectionConfiguration.SecurityMode.disabled)
-                    .setServiceName(SERVICE_NAME)
-                    .setPort(PORT)
+                    .setServiceName(hostname)
+                    .setPort(port)
                     .setDebuggerEnabled(true)
                     .build();
 

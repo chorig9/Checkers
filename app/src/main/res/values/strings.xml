@@ -21,4 +21,9 @@
     <string name="enter_password">Enter password</string>
     <string name="error">Error</string>
     <string name="invited">Invited</string>
+    <string name="hostname">Hostname</string>
+    <string name="ip_address">IP address</string>
+    <string name="port">Port</string>
+    <string name="network_header">Network</string>
+    <string name="game_header">Game</string>
 </resources>

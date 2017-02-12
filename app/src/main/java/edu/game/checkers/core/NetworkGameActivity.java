@@ -215,6 +215,7 @@ public class NetworkGameActivity extends GameActivity {
                 board.clicked(moveStruct.first, false);
                 board.clicked(moveStruct.second, false);
                 boardView.postInvalidate();
+                turnView.postInvalidate();
             }
         }
     }
