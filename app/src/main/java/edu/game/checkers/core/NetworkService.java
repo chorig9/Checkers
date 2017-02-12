@@ -56,6 +56,13 @@ public class NetworkService extends Service {
     private String hostname, ipAddress;
     private int port;
 
+    public class NetworkBinder extends Binder {
+        NetworkService getService() {
+            // Return this instance of NetworkService so clients can call public methods
+            return NetworkService.this;
+        }
+    }
+
     @Override
     public void onDestroy() {
         new EndConnectionTask().execute();
@@ -169,28 +176,7 @@ public class NetworkService extends Service {
             stanza.setBody(json.toString());
             xmpp.conn.sendStanza(stanza);
 
-            xmpp.conn.addAsyncStanzaListener(new StanzaListener() {
-                @Override
-                public void processPacket(Stanza packet) throws SmackException.NotConnectedException {
-                    Message message = (Message) packet;
-
-                    if(toUsername(message.getFrom()).equals(user)) {
-                        try {
-                            JSONObject json = new JSONObject(message.getBody());
-
-                            String type = json.get("type").toString();
-                            String body = json.get("body").toString();
-
-                            if (type.equals("response")) {
-                                responseCallback.onAction(body.equals("yes"));
-                                xmpp.conn.removeAsyncStanzaListener(this);
-                            }
-                        } catch (JSONException e) {
-                            e.printStackTrace();
-                        }
-                    }
-                }
-            }, StanzaTypeFilter.MESSAGE );
+            addInvitationResponseCallback(user, responseCallback);
         }
         catch (JSONException e){
             e.printStackTrace();
@@ -220,6 +206,31 @@ public class NetworkService extends Service {
         }
     }
 
+    private void addInvitationResponseCallback(final String user, final Callback1<Boolean> responseCallback){
+        xmpp.conn.addAsyncStanzaListener(new StanzaListener() {
+            @Override
+            public void processPacket(Stanza packet) throws SmackException.NotConnectedException {
+                Message message = (Message) packet;
+
+                if(toUsername(message.getFrom()).equals(user)) {
+                    try {
+                        JSONObject json = new JSONObject(message.getBody());
+
+                        String type = json.get("type").toString();
+                        String body = json.get("body").toString();
+
+                        if (type.equals("response")) {
+                            responseCallback.onAction(body.equals("yes"));
+                            xmpp.conn.removeAsyncStanzaListener(this);
+                        }
+                    } catch (JSONException e) {
+                        e.printStackTrace();
+                    }
+                }
+            }
+        }, StanzaTypeFilter.MESSAGE );
+    }
+
     private String toUsername(String jid){
         int index = jid.indexOf(hostname);
         return jid.substring(0, index - 1);
@@ -227,13 +238,6 @@ public class NetworkService extends Service {
 
     private String toJid(String username) {
         return username + "@" + hostname;
-    }
-
-    public class NetworkBinder extends Binder {
-        NetworkService getService() {
-            // Return this instance of NetworkService so clients can call public methods
-            return NetworkService.this;
-        }
     }
 
     private void loadConfig(){
@@ -316,88 +320,102 @@ public class NetworkService extends Service {
             conn.connect();
             conn.login();
             if(conn.isAuthenticated()) {
-                roster = Roster.getInstanceFor(conn);
-                roster.setSubscriptionMode(Roster.SubscriptionMode.manual);
 
-                // Accepts all subscribe requests and also send subscribe request back
-                conn.addAsyncStanzaListener(
-                        new StanzaListener() {
-                            @Override
-                            public void processPacket(Stanza packet) throws SmackException.NotConnectedException {
-                                Presence subscribed = new Presence(Presence.Type.subscribed);
-                                subscribed.setTo(packet.getFrom());
-                                conn.sendStanza(subscribed);
-
-                                if (!roster.isLoaded()) {
-                                    try {
-                                        roster.reloadAndWait();
-                                    } catch (Exception e) {
-                                        connectionCallback.onConnectionError(e.getMessage());
-                                    }
-                                }
-
-                                if (roster.getEntry(packet.getFrom()) == null) {
-                                    Presence subscribe = new Presence(Presence.Type.subscribe);
-                                    subscribe.setTo(packet.getFrom());
-                                    conn.sendStanza(subscribe);
-                                }
-                            }
-                        },
-                        PresenceTypeFilter.SUBSCRIBE);
-
-                conn.addAsyncStanzaListener(new StanzaListener() {
-                    @Override
-                    public void processPacket(Stanza packet) throws SmackException.NotConnectedException {
-                        if (!roster.isLoaded()) {
-                            try {
-                                roster.reloadAndWait();
-                            } catch (Exception e) {
-                                connectionCallback.onConnectionError(e.getMessage());
-                                return;
-                            }
-                        }
-                        RosterEntry entry = roster.getEntry(packet.getFrom());
-                        if(entry != null) {
-                            try {
-                                roster.removeEntry(entry);
-                                if(subscriptionListener != null)
-                                    subscriptionListener.onAction();
-                            } catch (Exception e) {
-                                connectionCallback.onConnectionError(e.getMessage());
-                            }
-                        }
-                    }
-                }, PresenceTypeFilter.UNSUBSCRIBE);
-
-                conn.addAsyncStanzaListener(new StanzaListener() {
-                    @Override
-                    public void processPacket(Stanza packet) throws SmackException.NotConnectedException {
-                        if(subscriptionListener != null)
-                            subscriptionListener.onAction();
-                    }
-                }, PresenceTypeFilter.SUBSCRIBED);
-
-                conn.addAsyncStanzaListener(new StanzaListener() {
-                    @Override
-                    public void processPacket(Stanza packet) throws SmackException.NotConnectedException {
-                        Message message = (Message) packet;
-
-                        try{
-                            JSONObject json = new JSONObject(message.getBody());
-
-                            String type = json.get("type").toString();
-                            String body = json.get("body").toString();
-
-                            if(type.equals("request") && body.equals("invite")){
-                                gameInviteCallback.onAction(toUsername(message.getFrom()));
-                            }
-                        }
-                        catch (JSONException e){
-                            //TODO
-                        }
-                    }
-                }, StanzaTypeFilter.MESSAGE);
+                initSubscribeListener();
+                initUnsubscribeListener();
+                initSubscribedListener();
+                initInvitationListener();
             }
+        }
+
+        private void initSubscribeListener(){
+            roster = Roster.getInstanceFor(conn);
+            roster.setSubscriptionMode(Roster.SubscriptionMode.manual);
+
+            // Accepts all subscribe requests and also send subscribe request back
+            conn.addAsyncStanzaListener(
+                    new StanzaListener() {
+                        @Override
+                        public void processPacket(Stanza packet) throws SmackException.NotConnectedException {
+                            Presence subscribed = new Presence(Presence.Type.subscribed);
+                            subscribed.setTo(packet.getFrom());
+                            conn.sendStanza(subscribed);
+
+                            if (!roster.isLoaded()) {
+                                try {
+                                    roster.reloadAndWait();
+                                } catch (Exception e) {
+                                    connectionCallback.onConnectionError(e.getMessage());
+                                }
+                            }
+
+                            if (roster.getEntry(packet.getFrom()) == null) {
+                                Presence subscribe = new Presence(Presence.Type.subscribe);
+                                subscribe.setTo(packet.getFrom());
+                                conn.sendStanza(subscribe);
+                            }
+                        }
+                    },
+                    PresenceTypeFilter.SUBSCRIBE);
+        }
+
+        private void initUnsubscribeListener(){
+            conn.addAsyncStanzaListener(new StanzaListener() {
+                @Override
+                public void processPacket(Stanza packet) throws SmackException.NotConnectedException {
+                    if (!roster.isLoaded()) {
+                        try {
+                            roster.reloadAndWait();
+                        } catch (Exception e) {
+                            connectionCallback.onConnectionError(e.getMessage());
+                            return;
+                        }
+                    }
+                    RosterEntry entry = roster.getEntry(packet.getFrom());
+                    if(entry != null) {
+                        try {
+                            roster.removeEntry(entry);
+                            if(subscriptionListener != null)
+                                subscriptionListener.onAction();
+                        } catch (Exception e) {
+                            connectionCallback.onConnectionError(e.getMessage());
+                        }
+                    }
+                }
+            }, PresenceTypeFilter.UNSUBSCRIBE);
+        }
+
+        private void initSubscribedListener(){
+            conn.addAsyncStanzaListener(new StanzaListener() {
+                @Override
+                public void processPacket(Stanza packet) throws SmackException.NotConnectedException {
+                    if(subscriptionListener != null)
+                        subscriptionListener.onAction();
+                }
+            }, PresenceTypeFilter.SUBSCRIBED);
+        }
+
+        private void initInvitationListener(){
+            conn.addAsyncStanzaListener(new StanzaListener() {
+                @Override
+                public void processPacket(Stanza packet) throws SmackException.NotConnectedException {
+                    Message message = (Message) packet;
+
+                    try{
+                        JSONObject json = new JSONObject(message.getBody());
+
+                        String type = json.get("type").toString();
+                        String body = json.get("body").toString();
+
+                        if(type.equals("request") && body.equals("invite")){
+                            gameInviteCallback.onAction(toUsername(message.getFrom()));
+                        }
+                    }
+                    catch (JSONException e){
+                        //TODO
+                    }
+                }
+            }, StanzaTypeFilter.MESSAGE);
         }
     }
 }

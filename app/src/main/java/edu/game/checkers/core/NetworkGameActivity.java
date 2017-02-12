@@ -20,12 +20,12 @@ import org.json.JSONObject;
 
 import edu.board.checkers.R;
 import edu.game.checkers.core.callbacks.Callback1;
-import edu.game.checkers.logic.Board;
+import edu.game.checkers.logic.Game;
 import edu.game.checkers.logic.Position;
 
 public class NetworkGameActivity extends GameActivity {
 
-    private Board.Player localPlayer;
+    private Game.Player localPlayer;
     private CommunicationManager manager;
 
     private PostAlertDialog dialog;
@@ -49,10 +49,10 @@ public class NetworkGameActivity extends GameActivity {
 
         boolean locallyInitialized = bundle.getBoolean("locallyInitialized");
         if(locallyInitialized){
-            localPlayer = Board.Player.WHITE;
+            localPlayer = Game.Player.WHITE;
         }
         else{
-            localPlayer = Board.Player.BLACK;
+            localPlayer = Game.Player.BLACK;
             boardView.rotate();
         }
 
@@ -113,13 +113,13 @@ public class NetworkGameActivity extends GameActivity {
                 if(board.getSelectedPiece() != null)
                     prevPosition = board.getSelectedPiece().getPosition().copy();
 
-                Board.ClickResult result = board.clicked(position, true);
+                Game.ClickResult result = board.clicked(position, true);
 
-                if(result == Board.ClickResult.MOVED){
+                if(result == Game.ClickResult.MOVED){
                     manager.sendMove(new MoveMessage(prevPosition, position).toString());
                 }
 
-                turnView.setColor(board.getCurrentPlayer() == Board.Player.WHITE ?
+                turnView.setColor(board.getCurrentPlayer() == Game.Player.WHITE ?
                         Color.WHITE : Color.BLACK);
 
                 return true;

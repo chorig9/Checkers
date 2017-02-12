@@ -4,15 +4,13 @@ import android.content.SharedPreferences;
 import android.content.SharedPreferences.Editor;
 import android.os.Bundle;
 import android.support.v7.app.AppCompatActivity;
-import android.text.Editable;
-import android.text.TextWatcher;
 import android.view.View;
 import android.view.WindowManager;
 import android.widget.CheckBox;
 import android.widget.EditText;
 
 import edu.board.checkers.R;
-import edu.game.checkers.logic.Board;
+import edu.game.checkers.logic.Game;
 
 public class OptionsActivity extends AppCompatActivity {
 
@@ -35,24 +33,63 @@ public class OptionsActivity extends AppCompatActivity {
 
         setContentView(R.layout.activity_options);
 
-        final SharedPreferences preferences = getSharedPreferences(OPTIONS_FILE, MODE_PRIVATE);
-        final CheckBox checkboxCapture = (CheckBox) findViewById(R.id.checkbox_backward);
-        final CheckBox checkboxFlying = (CheckBox) findViewById(R.id.checkbox_flying);
-        final CheckBox checkboxOptimal = (CheckBox) findViewById(R.id.checkbox_optimal);
+        initializeCheckboxes();
+        initializeNetworkConfig();
+    }
+
+    public void onCheckBoxClick(View view) {
+        final CheckBox checkBox = (CheckBox) findViewById(view.getId());
+
+        SharedPreferences preferences = getSharedPreferences(OPTIONS_FILE, MODE_PRIVATE);
+        int options = preferences.getInt(OPTIONS_KEY, 0);
+        Editor editor = preferences.edit();
+
+        switch (checkBox.getId()) {
+            case R.id.checkbox_backward:
+                if (checkBox.isChecked())
+                    editor.putInt(OPTIONS_KEY, options | Game.backwardCapture);
+                else
+                    editor.putInt(OPTIONS_KEY, options & ~Game.backwardCapture);
+                break;
+            case R.id.checkbox_flying:
+                if (checkBox.isChecked())
+                    editor.putInt(OPTIONS_KEY, options | Game.flyingKing);
+                else
+                    editor.putInt(OPTIONS_KEY, options & ~Game.flyingKing);
+                break;
+            case R.id.checkbox_optimal:
+                if (checkBox.isChecked())
+                    editor.putInt(OPTIONS_KEY, options | Game.optimalCapture);
+                else
+                    editor.putInt(OPTIONS_KEY, options & ~Game.optimalCapture);
+                break;
+        }
+
+        editor.apply();
+    }
+
+    private void initializeCheckboxes(){
+        SharedPreferences preferences = getSharedPreferences(OPTIONS_FILE, MODE_PRIVATE);
+        CheckBox checkboxCapture = (CheckBox) findViewById(R.id.checkbox_backward);
+        CheckBox checkboxFlying = (CheckBox) findViewById(R.id.checkbox_flying);
+        CheckBox checkboxOptimal = (CheckBox) findViewById(R.id.checkbox_optimal);
 
         int options = preferences.getInt(OPTIONS_KEY, 0);
 
-        checkboxCapture.setChecked(Board.isOptionEnabled(options, Board.backwardCapture));
-        checkboxFlying.setChecked(Board.isOptionEnabled(options, Board.flyingKing));
-        checkboxOptimal.setChecked(Board.isOptionEnabled(options, Board.optimalCapture));
+        checkboxCapture.setChecked(Game.isOptionEnabled(options, Game.backwardCapture));
+        checkboxFlying.setChecked(Game.isOptionEnabled(options, Game.flyingKing));
+        checkboxOptimal.setChecked(Game.isOptionEnabled(options, Game.optimalCapture));
+    }
 
+    private void initializeNetworkConfig(){
+        SharedPreferences preferences = getSharedPreferences(OPTIONS_FILE, MODE_PRIVATE);
         final EditText hostname = (EditText) findViewById(R.id.hostname);
         final EditText ip = (EditText) findViewById(R.id.ip);
         final EditText port = (EditText) findViewById(R.id.port);
 
         hostname.setText(preferences.getString(HOSTNAME_KEY, DEFAULT_HOSTNAME));
         ip.setText(preferences.getString(IP_ADDRESS_KEY, DEFAULT_IP));
-        port.setText(preferences.getInt(PORT_KEY, DEFAULT_PORT));
+        port.setText(Integer.toString(preferences.getInt(PORT_KEY, DEFAULT_PORT)));
         final Editor editor = preferences.edit();
 
         View.OnFocusChangeListener focusChangeListener = new View.OnFocusChangeListener() {
@@ -79,34 +116,4 @@ public class OptionsActivity extends AppCompatActivity {
         port.setOnFocusChangeListener(focusChangeListener);
     }
 
-    public void onCheckBoxClick(View view) {
-        final CheckBox checkBox = (CheckBox) findViewById(view.getId());
-
-        SharedPreferences preferences = getSharedPreferences(OPTIONS_FILE, MODE_PRIVATE);
-        int options = preferences.getInt(OPTIONS_KEY, 0);
-        Editor editor = preferences.edit();
-
-        switch (checkBox.getId()) {
-            case R.id.checkbox_backward:
-                if (checkBox.isChecked())
-                    editor.putInt(OPTIONS_KEY, options | Board.backwardCapture);
-                else
-                    editor.putInt(OPTIONS_KEY, options & ~Board.backwardCapture);
-                break;
-            case R.id.checkbox_flying:
-                if (checkBox.isChecked())
-                    editor.putInt(OPTIONS_KEY, options | Board.flyingKing);
-                else
-                    editor.putInt(OPTIONS_KEY, options & ~Board.flyingKing);
-                break;
-            case R.id.checkbox_optimal:
-                if (checkBox.isChecked())
-                    editor.putInt(OPTIONS_KEY, options | Board.optimalCapture);
-                else
-                    editor.putInt(OPTIONS_KEY, options & ~Board.optimalCapture);
-                break;
-        }
-
-        editor.apply();
-    }
 }

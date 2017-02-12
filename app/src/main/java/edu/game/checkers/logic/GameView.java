@@ -10,14 +10,14 @@ import android.view.View;
 
 import java.util.List;
 
-public class BoardView extends View {
+public class GameView extends View {
 
     private List<Position> hints;
     private Piece[][] pieces;
     private boolean rotation = false;
     private Paint paint;
 
-    public BoardView(Context context) {
+    public GameView(Context context) {
         super(context);
         paint = new Paint();
     }

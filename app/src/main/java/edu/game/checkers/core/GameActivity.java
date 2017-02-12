@@ -14,15 +14,15 @@ import android.view.WindowManager;
 import android.widget.LinearLayout;
 
 import edu.board.checkers.R;
-import edu.game.checkers.logic.BoardView;
-import edu.game.checkers.logic.Board;
+import edu.game.checkers.logic.GameView;
+import edu.game.checkers.logic.Game;
 import edu.game.checkers.logic.Position;
 
 public class GameActivity extends AppCompatActivity {
 
     protected int options;
-    protected Board board;
-    protected BoardView boardView;
+    protected Game board;
+    protected GameView boardView;
     protected TurnView turnView;
 
     @Override
@@ -50,8 +50,8 @@ public class GameActivity extends AppCompatActivity {
         setContentView(R.layout.activity_game);
 
         LinearLayout surface = (LinearLayout) findViewById(R.id.game_layout);
-        boardView = new BoardView(this);
-        board = new Board(options, boardView);
+        boardView = new GameView(this);
+        board = new Game(options, boardView);
 
         boardView.setPieces(board.getPieces());
         boardView.setOnTouchListener(createTouchManager());
@@ -66,7 +66,7 @@ public class GameActivity extends AppCompatActivity {
 
     public void undoMove(View view) {
         board.undoMove();
-        turnView.setColor(board.getCurrentPlayer() == Board.Player.WHITE ?
+        turnView.setColor(board.getCurrentPlayer() == Game.Player.WHITE ?
                 Color.WHITE : Color.BLACK);
     }
 
@@ -90,7 +90,7 @@ public class GameActivity extends AppCompatActivity {
             if(x < 0 || x >= 8 || y < 0 || y >= 8)
                 return null;
 
-            if(((BoardView)v).getBoardRotation()){
+            if(((GameView)v).getBoardRotation()){
                 x = 7 - x;
                 y = 7 - y;
             }
@@ -106,7 +106,7 @@ public class GameActivity extends AppCompatActivity {
                 return false;
 
             board.clicked(position, true);
-            turnView.setColor(board.getCurrentPlayer() == Board.Player.WHITE ?
+            turnView.setColor(board.getCurrentPlayer() == Game.Player.WHITE ?
                     Color.WHITE : Color.BLACK);
 
             return true;

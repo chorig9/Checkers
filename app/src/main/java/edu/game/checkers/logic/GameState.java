@@ -5,10 +5,10 @@ class GameState {
     Piece[][] pieces;
     Position selectedPiecePosition;
     boolean moved;
-    Board.Player currentPlayer;
+    Game.Player currentPlayer;
 
     GameState(Piece[][] pieces, Position selectedPiecePosition,
-              boolean moved, Board.Player currentPlayer)
+              boolean moved, Game.Player currentPlayer)
     {
         this.pieces = pieces;
         this.selectedPiecePosition = selectedPiecePosition;
