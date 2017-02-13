@@ -14,7 +14,7 @@ public class GameView extends View {
 
     private List<Position> hints;
     private Piece[][] pieces;
-    private boolean rotation = false;
+    private boolean rotated = false;
     private Paint paint;
 
     public GameView(Context context) {
@@ -23,11 +23,7 @@ public class GameView extends View {
     }
 
     public void rotate(){
-        rotation = !rotation;
-    }
-
-    public boolean getBoardRotation(){
-        return rotation;
+        rotated = !rotated;
     }
 
     public void setPieces(Piece[][] pieces) {
@@ -38,7 +34,7 @@ public class GameView extends View {
     public void onDraw(Canvas canvas) {
         super.onDraw(canvas);
 
-        if(rotation)
+        if(rotated)
             canvas.rotate(180, canvas.getWidth() / 2, canvas.getHeight() / 2);
 
         drawBoard(canvas);
@@ -90,6 +86,19 @@ public class GameView extends View {
             canvas.drawRect(hint.x * tileSize, hint.y * tileSize,
                     (hint.x+1) * tileSize, (hint.y+1) * tileSize, paint);
         }
+    }
+
+    public Position calculatePosition(Position position){
+        if(!position.isInRange())
+            return null;
+
+        Position realPosition = position.copy();
+        if(rotated){
+            realPosition.x = 7 - position.x;
+            realPosition.y = 7 - position.y;
+        }
+
+        return realPosition;
     }
 
     @Override

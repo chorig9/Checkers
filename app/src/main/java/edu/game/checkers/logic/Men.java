@@ -47,18 +47,14 @@ public class Men extends  Piece{
         int backY = position.y - 2 * orientation;
 
         for(int px = -2; px <= 2; px+=4) {
-            Position pos = new Position(position.x + px, forY);
-            if(pos.isInRange() && isMoveCorrectAndCapturing(pos))
+            Position forwardPos = new Position(position.x + px, forY);
+            if(forwardPos.isInRange() && isMoveCorrectAndCapturing(forwardPos))
                 return true;
-        }
 
-        if(Game.isOptionEnabled(board.options, Game.backwardCapture)) {
-            for(int px = -2; px <= 2; px+=4)
-            {
-                Position pos = new Position(position.x + px, backY);
-                if(pos.isInRange() && isMoveCorrectAndCapturing(pos))
-                    return true;
-            }
+            Position backPos = new Position(position.x + px, backY);
+            if(Game.isOptionEnabled(board.options, Game.backwardCapture)
+                    && backPos.isInRange() && isMoveCorrectAndCapturing(backPos))
+                return true;
         }
 
         return false;

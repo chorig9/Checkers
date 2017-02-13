@@ -81,31 +81,21 @@ public class GameActivity extends AppCompatActivity {
 
     protected class TouchManager implements View.OnTouchListener{
 
-        Position calculatePosition(View v, MotionEvent event){
-            int tileSize = v.getWidth() / 8;
-
-            int x = ((int) event.getX()) / tileSize;
-            int y = ((int) event.getY()) / tileSize;
-
-            if(x < 0 || x >= 8 || y < 0 || y >= 8)
-                return null;
-
-            if(((GameView)v).getBoardRotation()){
-                x = 7 - x;
-                y = 7 - y;
-            }
-
-           return new Position(x, y);
-        }
-
         @Override
         public boolean onTouch(View v, MotionEvent event) {
-            Position position = calculatePosition(v, event);
+            int tileSize = v.getWidth() / 8;
+            GameView gameView = (GameView) v;
+            Position touchPosition = new Position(
+                    (int) (event.getX() / tileSize) ,
+                    (int) (event.getY() / tileSize)
+            );
 
-            if(position == null)
+            Position realPosition = gameView.calculatePosition(touchPosition);
+
+            if(realPosition == null)
                 return false;
 
-            board.clicked(position, true);
+            board.clicked(realPosition, true);
             turnView.setColor(board.getCurrentPlayer() == Game.Player.WHITE ?
                     Color.WHITE : Color.BLACK);
 

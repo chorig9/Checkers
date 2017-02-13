@@ -19,6 +19,7 @@ import org.json.JSONException;
 import org.json.JSONObject;
 
 import edu.board.checkers.R;
+import edu.game.checkers.logic.GameView;
 import edu.game.checkers.utils.Callback1;
 import edu.game.checkers.logic.Game;
 import edu.game.checkers.logic.Position;
@@ -86,14 +87,14 @@ public class NetworkGameActivity extends GameActivity {
     public void onBackPressed() {
         new AlertDialog(this).createQuestionDialog("Exit", "Do you want to exit?",
                 new DialogInterface.OnClickListener() {
-            @Override
-            public void onClick(DialogInterface dialog, int which) {
-                if(which == Dialog.BUTTON_POSITIVE){
-                    endGame();
-                    NetworkGameActivity.super.onBackPressed();
-                }
-            }
-        });
+                    @Override
+                    public void onClick(DialogInterface dialog, int which) {
+                        if(which == Dialog.BUTTON_POSITIVE){
+                            endGame();
+                            NetworkGameActivity.super.onBackPressed();
+                        }
+                    }
+                });
     }
 
     @Override
@@ -104,19 +105,26 @@ public class NetworkGameActivity extends GameActivity {
                 if(board.getCurrentPlayer() != localPlayer)
                     return true;
 
-                Position position = calculatePosition(v, event);
+                int tileSize = v.getWidth() / 8;
+                GameView gameView = (GameView) v;
+                Position touchPosition = new Position(
+                        (int) (event.getX() / tileSize) ,
+                        (int) (event.getY() / tileSize)
+                );
 
-                if(position == null)
+                Position realPosition = gameView.calculatePosition(touchPosition);
+
+                if(realPosition == null)
                     return false;
 
                 Position prevPosition = null;
                 if(board.getSelectedPiece() != null)
                     prevPosition = board.getSelectedPiece().getPosition().copy();
 
-                Game.ClickResult result = board.clicked(position, true);
+                Game.ClickResult result = board.clicked(realPosition, true);
 
                 if(result == Game.ClickResult.MOVED){
-                    manager.sendMove(new MoveMessage(prevPosition, position).toString());
+                    manager.sendMove(new MoveMessage(prevPosition, realPosition).toString());
                 }
 
                 turnView.setColor(board.getCurrentPlayer() == Game.Player.WHITE ?

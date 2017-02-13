@@ -2,13 +2,15 @@ package edu.game.checkers.ui;
 
 class Friend {
 
-    String username, status, info = "";
+    String username, status;
+    int options;
     boolean accepted = true;
+    boolean invitedToGame = false;
 
-    Friend(String username, String status, String info)
+    Friend(String username, String status, int options)
     {
         this(username, status);
-        this.info = info;
+        this.options = options;
     }
 
     Friend(String username, String status)

@@ -37,6 +37,8 @@ import edu.game.checkers.utils.Callback1;
 import edu.game.checkers.utils.Callback3;
 import edu.game.checkers.utils.ConnectionCallback;
 
+import static edu.game.checkers.ui.OptionsActivity.OPTIONS_KEY;
+
 public class NetworkActivity extends AppCompatActivity {
 
     private ArrayList<Friend> currentFriendsList = new ArrayList<>();
@@ -147,11 +149,13 @@ public class NetworkActivity extends AppCompatActivity {
                 MODE_PRIVATE);
         SharedPreferences.Editor editor = preferences.edit();
         String name = ((EditText) findViewById(R.id.username)).getText().toString();
-        editor.putString("name",  name);
         String password = ((EditText) findViewById(R.id.password)).getText().toString();
+
+        editor.putString("name",  name);
         editor.putString("password", password);
         editor.apply();
 
+        final int options = preferences.getInt(OPTIONS_KEY, -1);
         networkService.connectToServer(name, password, new ConnectionCallback() {
             @Override
             public void onConnectionError(String error) {
@@ -160,6 +164,7 @@ public class NetworkActivity extends AppCompatActivity {
 
             @Override
             public void onSuccess() {
+                networkService.setStatus(Integer.toString(options));
                 initList();
             }
         });
@@ -182,11 +187,9 @@ public class NetworkActivity extends AppCompatActivity {
                                         NetworkActivity.this.dialog.createInfoDialog("Error", "User not on list");
                                     }
                                     else {
-                                        networkService.sendResponse(user, "yes");
-
+                                        networkService.sendGameInvitationResponse(user, "yes");
                                         // take other's player options, other player is initializing connection
-                                        startGame(0, user, false);
-                                        //Integer.valueOf(otherPlayer.info)
+                                        startGame(otherPlayer.options, user, false);
                                     }
                                 }
                             }
@@ -210,7 +213,7 @@ public class NetworkActivity extends AppCompatActivity {
 
                 if(friend != null){
                     friend.status = presence;
-                    friend.info = info;
+                    friend.options = info;
 
                     if(currentFriendsList.contains(friend)) {
                         listView.post(new Runnable() {
@@ -228,7 +231,7 @@ public class NetworkActivity extends AppCompatActivity {
             @Override
             public void onAction() {
                 friendsList.clear();
-                friendsList.addAll(networkService.getFriendsList());
+                friendsList.addAll(networkService.getUsers());
 
                 // post is used because showUsers will be called from outside NetworkActivity
                 listView.post(new Runnable() {
@@ -248,7 +251,7 @@ public class NetworkActivity extends AppCompatActivity {
 
         listView.setAdapter(adapter);
 
-        friendsList.addAll(networkService.getFriendsList());
+        friendsList.addAll(networkService.getUsers());
         currentFriendsList.addAll(friendsList);
 
         final EditText text = (EditText) findViewById(R.id.search);
@@ -299,7 +302,7 @@ public class NetworkActivity extends AppCompatActivity {
         if(element.getTag() == null || !element.getTag().equals("disabled")){
             element.setTag("disabled");
             invitation.setText(R.string.invited);
-            networkService.sendInvitation(name, new Callback1<Boolean>() {
+            networkService.sendGameInvitation(name, new Callback1<Boolean>() {
                 @Override
                 public void onAction(Boolean accepted) {
 
@@ -419,7 +422,7 @@ public class NetworkActivity extends AppCompatActivity {
                     convertView.setTag("disabled");
                 }
 
-                status.setText(friend.info);
+                status.setText(friend.options);
             }
             return convertView;
         }

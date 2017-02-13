@@ -33,7 +33,6 @@ import java.util.logging.Logger;
 
 import edu.game.checkers.utils.Callback0;
 import edu.game.checkers.utils.Callback1;
-import edu.game.checkers.utils.Callback3;
 import edu.game.checkers.utils.ConnectionCallback;
 
 import static edu.game.checkers.ui.OptionsActivity.DEFAULT_HOSTNAME;
@@ -52,6 +51,7 @@ public class NetworkService extends Service {
     private XMPP xmpp;
     private ConnectionCallback connectionCallback = null;
     private Callback1<String> gameInviteCallback = null;
+    private Collection<UserInfo> users = new ArrayList<>();
 
     private String hostname, ipAddress;
     private int port;
@@ -80,26 +80,9 @@ public class NetworkService extends Service {
         new ConnectToServerTask(callback).execute(username, password);
     }
 
-    public void subscribeUser(final String username, final Callback1<Boolean> callback){
+    public void subscribeUser(final String username){
         try{
-            Presence subscribe = new Presence(Presence.Type.subscribe);
-            subscribe.setTo(toJid(username));
-            xmpp.conn.sendStanza(subscribe);
-
-            xmpp.conn.addAsyncStanzaListener(new StanzaListener() {
-                @Override
-                public void processPacket(Stanza packet) throws SmackException.NotConnectedException {
-                    if(toUsername(packet.getFrom()).equals(username))
-                        callback.onAction(true);
-                }
-            }, PresenceTypeFilter.SUBSCRIBED);
-            xmpp.conn.addAsyncStanzaListener(new StanzaListener() {
-                @Override
-                public void processPacket(Stanza packet) throws SmackException.NotConnectedException {
-                    if(toUsername(packet.getFrom()).equals(username))
-                        callback.onAction(false);
-                }
-            }, PresenceTypeFilter.UNSUBSCRIBED);
+            xmpp.sendSubscribeStanza(toJid(username));
         }
         catch(SmackException.NotConnectedException e){
             this.connectionCallback.onConnectionError(e.getMessage());
@@ -119,52 +102,66 @@ public class NetworkService extends Service {
         return new CommunicationManager(toJid(to), xmpp.conn, connectionCallback);
     }
 
-    public Collection<Friend> getFriendsList() {
-        try{
-            // reload list
-            xmpp.roster.reloadAndWait();
+    public Collection<UserInfo> getUsers() {
+//        try{
+//            // reload list
+//            xmpp.roster.reloadAndWait();
+//
+//            Collection<RosterEntry> entries = xmpp.roster.getEntries();
+//            Collection<UserInfo> users = new ArrayList<>();
+//            for(RosterEntry entry : entries){
+//                Presence presence = xmpp.roster.getPresence(entry.getUser());
+//
+//
+//                System.out.println(presence.getMode().toString());
+//
+//
+//                UserInfo userInfo = createUserInfo(presence);
+//                userInfo.bothWaySubscription.set(xmpp.roster.isSubscribedToMyPresence(entry.getUser()));
+//                users.add(userInfo);
+//            }
+//
+//            return users;
+//        } catch(Exception e){
+//            connectionCallback.onConnectionError(e.getMessage());
+//            return null;
+//        }
 
-            Collection<RosterEntry> entries = xmpp.roster.getEntries();
-            Collection<Friend> users = new ArrayList<>();
-            for(RosterEntry entry : entries){
-                Presence presence = xmpp.roster.getPresence(entry.getUser());
-                Friend friend = new Friend(toUsername(entry.getUser()), presence.getType().name(), presence.getStatus());
-                friend.accepted = xmpp.roster.isSubscribedToMyPresence(entry.getUser());
+        return users;
+    }
 
-                users.add(friend);
-            }
+    public void setStatus(String status){
+        try {
+            Presence presence = new Presence(Presence.Type.available, status,
+                    42, Presence.Mode.available);
 
-            return users;
-        } catch(Exception e){
+            xmpp.conn.sendStanza(presence);
+        } catch (SmackException.NotConnectedException e) {
             connectionCallback.onConnectionError(e.getMessage());
-            return null;
         }
     }
 
-    public void setPresenceListener(final Callback3<String, String, String> listener){
-        xmpp.roster.addRosterListener(new RosterListener() {
+    public void setPresenceListener(final Callback1<UserInfo> listener){
 
-            public void entriesAdded(Collection<String> addresses) {}
-            public void entriesUpdated(Collection<String> addresses) {}
-            public void entriesDeleted(Collection<String> addresses) {}
-
-            @Override
-            public void presenceChanged(Presence presence) {
-                String username = toUsername(presence.getFrom());
-                listener.onAction(username, presence.getType().name(), presence.getStatus());
-            }
-        });
     }
 
-    public void setSubscriptionListener(final Callback0 listener){
-        xmpp.subscriptionListener = listener;
+    private UserInfo createUserInfo(Presence from){
+        String username = toUsername(from.getFrom());
+        String status = from.getStatus();
+        String presenceName = from.getType().name();
+
+        return new UserInfo(username, status, presenceName);
+    }
+
+    public void setUsersCollectionListener(final Callback0 listener){
+        xmpp.usersCollectionChanged = listener;
     }
 
     public void setGameInviteCallback(Callback1<String> gameInviteCallback){
         this.gameInviteCallback = gameInviteCallback;
     }
 
-    public void sendInvitation(final String user, final Callback1<Boolean> responseCallback){
+    public void sendGameInvitation(final String user, final Callback1<Boolean> responseCallback){
         try{
             Message stanza = new Message();
             stanza.setTo(toJid(user));
@@ -176,7 +173,7 @@ public class NetworkService extends Service {
             stanza.setBody(json.toString());
             xmpp.conn.sendStanza(stanza);
 
-            addInvitationResponseCallback(user, responseCallback);
+            addGameInvitationResponseCallback(user, responseCallback);
         }
         catch (JSONException e){
             e.printStackTrace();
@@ -186,7 +183,7 @@ public class NetworkService extends Service {
         }
     }
 
-    public void sendResponse(String user, String response){
+    public void sendGameInvitationResponse(String user, String response){
         try{
             Message stanza = new Message();
             stanza.setTo(toJid(user));
@@ -206,7 +203,10 @@ public class NetworkService extends Service {
         }
     }
 
-    private void addInvitationResponseCallback(final String user, final Callback1<Boolean> responseCallback){
+    private void addGameInvitationResponseCallback(
+            final String user,
+            final Callback1<Boolean> responseCallback)
+    {
         xmpp.conn.addAsyncStanzaListener(new StanzaListener() {
             @Override
             public void processPacket(Stanza packet) throws SmackException.NotConnectedException {
@@ -297,11 +297,25 @@ public class NetworkService extends Service {
         }
     }
 
+    private UserInfo findUserByJid(String jid){
+        String username = toUsername(jid);
+        return findUserByName(username);
+    }
+
+    private UserInfo findUserByName(String username){
+        for(UserInfo userInfo : users){
+            if(userInfo.username.equals(username))
+                return userInfo;
+        }
+        return null;
+    }
+
     private class XMPP {
 
         private AbstractXMPPConnection conn;
         private Roster roster;
-        private Callback0 subscriptionListener = null;
+        private Callback0 usersCollectionChanged = null;
+        private Collection<String> subscribingUsers = new ArrayList<>();
 
         XMPP(final String username, String password)
                 throws IOException, XMPPException, SmackException {
@@ -312,7 +326,6 @@ public class NetworkService extends Service {
                     .setSecurityMode(ConnectionConfiguration.SecurityMode.disabled)
                     .setServiceName(hostname)
                     .setPort(port)
-                    .setDebuggerEnabled(true)
                     .build();
 
             conn = new XMPPTCPConnection(config);
@@ -320,11 +333,12 @@ public class NetworkService extends Service {
             conn.connect();
             conn.login();
             if(conn.isAuthenticated()) {
-
-                initSubscribeListener();
-                initUnsubscribeListener();
-                initSubscribedListener();
+//                initSubscribeListener();
+//                initUnSubscribeListener();
+//                initSubscribedListener();
                 initInvitationListener();
+
+                    initRosterListener();
             }
         }
 
@@ -337,60 +351,86 @@ public class NetworkService extends Service {
                     new StanzaListener() {
                         @Override
                         public void processPacket(Stanza packet) throws SmackException.NotConnectedException {
-                            Presence subscribed = new Presence(Presence.Type.subscribed);
-                            subscribed.setTo(packet.getFrom());
-                            conn.sendStanza(subscribed);
+                            String sender = packet.getFrom();
 
-                            if (!roster.isLoaded()) {
-                                try {
-                                    roster.reloadAndWait();
-                                } catch (Exception e) {
-                                    connectionCallback.onConnectionError(e.getMessage());
-                                }
+                            sendSubscribeResponseStanza(sender);
+                            UserInfo user = findUserByJid(sender);
+
+                            if(user == null) {
+                                subscribingUsers.add(sender);
+                                sendSubscribeStanza(sender);
                             }
-
-                            if (roster.getEntry(packet.getFrom()) == null) {
-                                Presence subscribe = new Presence(Presence.Type.subscribe);
-                                subscribe.setTo(packet.getFrom());
-                                conn.sendStanza(subscribe);
+                            else{
+                                user.bothWaySubscription = true;
+                                usersCollectionChanged.onAction();
                             }
                         }
                     },
                     PresenceTypeFilter.SUBSCRIBE);
         }
 
-        private void initUnsubscribeListener(){
+        private void sendSubscribeResponseStanza(String to) throws SmackException.NotConnectedException {
+            Presence subscribed = new Presence(Presence.Type.subscribed);
+            subscribed.setTo(to);
+            conn.sendStanza(subscribed);
+        }
+
+        private void sendSubscribeStanza(String to) throws SmackException.NotConnectedException {
+            Presence subscribe = new Presence(Presence.Type.subscribe);
+            subscribe.setTo(to);
+            conn.sendStanza(subscribe);
+        }
+
+        private void initUnSubscribeListener(){
             conn.addAsyncStanzaListener(new StanzaListener() {
                 @Override
                 public void processPacket(Stanza packet) throws SmackException.NotConnectedException {
-                    if (!roster.isLoaded()) {
-                        try {
-                            roster.reloadAndWait();
-                        } catch (Exception e) {
-                            connectionCallback.onConnectionError(e.getMessage());
-                            return;
-                        }
-                    }
-                    RosterEntry entry = roster.getEntry(packet.getFrom());
-                    if(entry != null) {
-                        try {
-                            roster.removeEntry(entry);
-                            if(subscriptionListener != null)
-                                subscriptionListener.onAction();
-                        } catch (Exception e) {
-                            connectionCallback.onConnectionError(e.getMessage());
-                        }
+                    String sender = packet.getFrom();
+                    UserInfo user = findUserByJid(sender);
+
+                    if(user != null) {
+                        users.remove(findUserByJid(sender));
+                        if(usersCollectionChanged != null)
+                            usersCollectionChanged.onAction();
+
+                        removeUserFromRoster(sender);
                     }
                 }
             }, PresenceTypeFilter.UNSUBSCRIBE);
+        }
+
+        private void removeUserFromRoster(String jid){
+            try {
+                if(!roster.isLoaded()){
+                    roster.reloadAndWait();
+                }
+                RosterEntry entry = roster.getEntry(jid);
+                if(entry != null)
+                    roster.removeEntry(entry);
+            } catch (InterruptedException e){
+                // TODO
+            } catch (Exception e) {
+                connectionCallback.onConnectionError(e.getMessage());
+            }
         }
 
         private void initSubscribedListener(){
             conn.addAsyncStanzaListener(new StanzaListener() {
                 @Override
                 public void processPacket(Stanza packet) throws SmackException.NotConnectedException {
-                    if(subscriptionListener != null)
-                        subscriptionListener.onAction();
+                    String sender = packet.getFrom();
+                    Presence presence = (Presence) packet;
+                    UserInfo userInfo = createUserInfo(presence);
+
+                    if(subscribingUsers.contains(sender)) {
+                        userInfo.bothWaySubscription = true;
+                        subscribingUsers.remove(sender);
+                    }
+
+                    users.add(userInfo);
+
+                    if(usersCollectionChanged != null)
+                        usersCollectionChanged.onAction();
                 }
             }, PresenceTypeFilter.SUBSCRIBED);
         }
@@ -416,6 +456,46 @@ public class NetworkService extends Service {
                     }
                 }
             }, StanzaTypeFilter.MESSAGE);
+        }
+
+        private void initRosterListener(){
+            xmpp.roster.addRosterListener(new RosterListener() {
+
+                @Override
+                public void entriesAdded(Collection<String> addresses) {
+                    for(String address : addresses){
+                        Presence presence = roster.getPresence(address);
+                        UserInfo userInfo = createUserInfo(presence);
+                        userInfo.bothWaySubscription = xmpp.roster.isSubscribedToMyPresence(address);
+
+                        users.add(userInfo);
+                    }
+                }
+
+                @Override
+                public void entriesUpdated(Collection<String> addresses) {
+                    System.out.println(addresses);
+                }
+
+                @Override
+                public void entriesDeleted(Collection<String> addresses) {
+                    for(String address : addresses){
+                        users.remove(findUserByJid(address));
+                    }
+                }
+
+                @Override
+                public void presenceChanged(Presence presence) {
+                    UserInfo presenceInfo = createUserInfo(presence);
+                    UserInfo user = findUserByJid(presence.getFrom());
+
+                    user.presence = presenceInfo.presence;
+                    user.status = presenceInfo.status;
+
+                    if(usersCollectionChanged != null)
+                        usersCollectionChanged.onAction();
+                }
+            });
         }
     }
 }
