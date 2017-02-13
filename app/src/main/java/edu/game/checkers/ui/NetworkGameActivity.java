@@ -1,4 +1,4 @@
-package edu.game.checkers.core;
+package edu.game.checkers.ui;
 
 import android.app.Dialog;
 import android.content.ComponentName;
@@ -19,7 +19,7 @@ import org.json.JSONException;
 import org.json.JSONObject;
 
 import edu.board.checkers.R;
-import edu.game.checkers.core.callbacks.Callback1;
+import edu.game.checkers.utils.Callback1;
 import edu.game.checkers.logic.Game;
 import edu.game.checkers.logic.Position;
 

@@ -1,10 +1,8 @@
-package edu.game.checkers.core;
+package edu.game.checkers.ui;
 
 import org.jivesoftware.smack.SmackException;
 import org.jivesoftware.smack.StanzaListener;
 import org.jivesoftware.smack.XMPPConnection;
-import org.jivesoftware.smack.chat.Chat;
-import org.jivesoftware.smack.chat.ChatMessageListener;
 import org.jivesoftware.smack.filter.StanzaTypeFilter;
 import org.jivesoftware.smack.packet.Message;
 import org.jivesoftware.smack.packet.Stanza;
@@ -14,10 +12,10 @@ import org.json.JSONObject;
 import java.util.Queue;
 import java.util.concurrent.ArrayBlockingQueue;
 
-import edu.game.checkers.core.callbacks.Callback1;
-import edu.game.checkers.core.callbacks.ConnectionCallback;
+import edu.game.checkers.utils.Callback1;
+import edu.game.checkers.utils.ConnectionCallback;
 
-public class CommunicationManager {
+class CommunicationManager {
 
     private XMPPConnection conn;
     private ConnectionCallback connectionCallback;
@@ -25,13 +23,13 @@ public class CommunicationManager {
     private String otherName;
     private Queue<Callback1<String>> responseQueue = new ArrayBlockingQueue<>(10);
 
-    public CommunicationManager(String to, XMPPConnection conn, ConnectionCallback connectionCallback){
+    CommunicationManager(String to, XMPPConnection conn, ConnectionCallback connectionCallback){
         this.conn = conn;
         this.otherName = to;
         this.connectionCallback = connectionCallback;
     }
 
-    public void setCallbacks(final Callback1<String> requestCallback, final Callback1<String> gameCallback){
+    void setCallbacks(final Callback1<String> requestCallback, final Callback1<String> gameCallback){
         stanzaListener = new StanzaListener() {
             @Override
             public void processPacket(Stanza packet) throws SmackException.NotConnectedException {
@@ -65,7 +63,7 @@ public class CommunicationManager {
     }
 
     // send response to a request
-    public void sendResponse(String response){
+    void sendResponse(String response){
         try {
             sendMessage(response, "response");
         } catch (SmackException.NotConnectedException e) {
@@ -74,7 +72,7 @@ public class CommunicationManager {
     }
 
     // send request and excpect response
-    public void sendRequest(String message, Callback1<String> callback){
+    void sendRequest(String message, Callback1<String> callback){
         try {
             sendMessage(message, "request");
             responseQueue.add(callback);
@@ -84,7 +82,7 @@ public class CommunicationManager {
     }
 
     // send game move
-    public void sendMove(String move){
+    void sendMove(String move){
         try {
             sendMessage(move, "game");
         } catch (SmackException.NotConnectedException e) {
@@ -102,7 +100,7 @@ public class CommunicationManager {
     }
 
     // MUST be called when connection is being closed
-    public void end(){
+    void end(){
         conn.removeAsyncStanzaListener(stanzaListener);
     }
 

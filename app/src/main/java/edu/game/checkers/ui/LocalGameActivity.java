@@ -1,4 +1,4 @@
-package edu.game.checkers.core;
+package edu.game.checkers.ui;
 
 import android.os.Bundle;
 import android.widget.TextView;

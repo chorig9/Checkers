@@ -1,9 +1,11 @@
-package edu.game.checkers.core;
+package edu.game.checkers.ui;
 
 import android.content.SharedPreferences;
 import android.content.SharedPreferences.Editor;
 import android.os.Bundle;
 import android.support.v7.app.AppCompatActivity;
+import android.text.Editable;
+import android.text.TextWatcher;
 import android.view.View;
 import android.view.WindowManager;
 import android.widget.CheckBox;
@@ -11,6 +13,7 @@ import android.widget.EditText;
 
 import edu.board.checkers.R;
 import edu.game.checkers.logic.Game;
+import edu.game.checkers.utils.Callback0;
 
 public class OptionsActivity extends AppCompatActivity {
 
@@ -92,28 +95,46 @@ public class OptionsActivity extends AppCompatActivity {
         port.setText(Integer.toString(preferences.getInt(PORT_KEY, DEFAULT_PORT)));
         final Editor editor = preferences.edit();
 
-        View.OnFocusChangeListener focusChangeListener = new View.OnFocusChangeListener() {
+        hostname.addTextChangedListener(new TextChangedListener(new Callback0() {
             @Override
-            public void onFocusChange(View v, boolean hasFocus) {
-                EditText editText = (EditText) v;
-                switch (editText.getId()) {
-                    case R.id.hostname:
-                        editor.putString(HOSTNAME_KEY, hostname.getText().toString());
-                        break;
-                    case R.id.ip:
-                        editor.putString(IP_ADDRESS_KEY, ip.getText().toString());
-                        break;
-                    case R.id.port:
-                        editor.putInt(PORT_KEY, Integer.decode(port.getText().toString()));
-                        break;
-                }
+            public void onAction() {
+                editor.putString(HOSTNAME_KEY, hostname.getText().toString());
                 editor.apply();
             }
-        };
+        }));
 
-        hostname.setOnFocusChangeListener(focusChangeListener);
-        ip.setOnFocusChangeListener(focusChangeListener);
-        port.setOnFocusChangeListener(focusChangeListener);
+        ip.addTextChangedListener(new TextChangedListener(new Callback0() {
+            @Override
+            public void onAction() {
+                editor.putString(IP_ADDRESS_KEY, ip.getText().toString());
+                editor.apply();
+            }
+        }));
+
+        port.addTextChangedListener(new TextChangedListener(new Callback0() {
+            @Override
+            public void onAction() {
+                editor.putInt(PORT_KEY, Integer.decode(port.getText().toString()));
+                editor.apply();
+            }
+        }));
+    }
+
+    private class TextChangedListener implements TextWatcher {
+
+        private Callback0 callback;
+
+        TextChangedListener(Callback0 callback){
+            this.callback = callback;
+        }
+
+        public void beforeTextChanged(CharSequence s, int start, int count, int after) {}
+        public void onTextChanged(CharSequence s, int start, int before, int count) {}
+
+        @Override
+        public void afterTextChanged(Editable s) {
+            callback.onAction();
+        }
     }
 
 }

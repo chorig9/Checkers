@@ -1,4 +1,4 @@
-package edu.game.checkers.core;
+package edu.game.checkers.ui;
 
 import android.content.Intent;
 import android.support.v7.app.AppCompatActivity;

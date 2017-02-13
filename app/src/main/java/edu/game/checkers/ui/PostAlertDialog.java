@@ -1,13 +1,13 @@
-package edu.game.checkers.core;
+package edu.game.checkers.ui;
 
 import android.content.Context;
 import android.os.Handler;
 
-public class PostAlertDialog extends AlertDialog {
+class PostAlertDialog extends AlertDialog {
 
     private Handler handler;
 
-    public PostAlertDialog(Context activity, Handler handler){
+    PostAlertDialog(Context activity, Handler handler){
         super(activity);
         this.handler = handler;
     }

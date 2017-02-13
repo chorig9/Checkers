@@ -1,4 +1,4 @@
-package edu.game.checkers.core;
+package edu.game.checkers.ui;
 
 import android.app.Service;
 import android.content.Intent;
@@ -31,18 +31,18 @@ import java.util.Collection;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 
-import edu.game.checkers.core.callbacks.Callback0;
-import edu.game.checkers.core.callbacks.Callback1;
-import edu.game.checkers.core.callbacks.Callback3;
-import edu.game.checkers.core.callbacks.ConnectionCallback;
+import edu.game.checkers.utils.Callback0;
+import edu.game.checkers.utils.Callback1;
+import edu.game.checkers.utils.Callback3;
+import edu.game.checkers.utils.ConnectionCallback;
 
-import static edu.game.checkers.core.OptionsActivity.DEFAULT_HOSTNAME;
-import static edu.game.checkers.core.OptionsActivity.DEFAULT_IP;
-import static edu.game.checkers.core.OptionsActivity.DEFAULT_PORT;
-import static edu.game.checkers.core.OptionsActivity.HOSTNAME_KEY;
-import static edu.game.checkers.core.OptionsActivity.IP_ADDRESS_KEY;
-import static edu.game.checkers.core.OptionsActivity.OPTIONS_FILE;
-import static edu.game.checkers.core.OptionsActivity.PORT_KEY;
+import static edu.game.checkers.ui.OptionsActivity.DEFAULT_HOSTNAME;
+import static edu.game.checkers.ui.OptionsActivity.DEFAULT_IP;
+import static edu.game.checkers.ui.OptionsActivity.DEFAULT_PORT;
+import static edu.game.checkers.ui.OptionsActivity.HOSTNAME_KEY;
+import static edu.game.checkers.ui.OptionsActivity.IP_ADDRESS_KEY;
+import static edu.game.checkers.ui.OptionsActivity.OPTIONS_FILE;
+import static edu.game.checkers.ui.OptionsActivity.PORT_KEY;
 
 
 public class NetworkService extends Service {
@@ -256,7 +256,7 @@ public class NetworkService extends Service {
         ConnectionCallback callback;
         Exception exception = null;
 
-        public ConnectToServerTask(ConnectionCallback callback){
+        ConnectToServerTask(ConnectionCallback callback){
             this.callback = callback;
         }
 
@@ -303,7 +303,7 @@ public class NetworkService extends Service {
         private Roster roster;
         private Callback0 subscriptionListener = null;
 
-        public XMPP(final String username, String password)
+        XMPP(final String username, String password)
                 throws IOException, XMPPException, SmackException {
 
             XMPPTCPConnectionConfiguration config = XMPPTCPConnectionConfiguration.builder()

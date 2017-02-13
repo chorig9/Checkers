@@ -1,4 +1,4 @@
-package edu.game.checkers.core.callbacks;
+package edu.game.checkers.utils;
 
 public interface Callback3<A,B,C> {
 

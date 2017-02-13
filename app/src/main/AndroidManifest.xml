@@ -11,7 +11,7 @@
         android:supportsRtl="true"
         android:theme="@style/AppTheme">
 
-        <activity android:name="edu.game.checkers.core.MainActivity"
+        <activity android:name="edu.game.checkers.ui.MainActivity"
             android:screenOrientation="portrait">
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
@@ -20,26 +20,26 @@
             </intent-filter>
         </activity>
 
-        <activity android:name="edu.game.checkers.core.OptionsActivity"
+        <activity android:name="edu.game.checkers.ui.OptionsActivity"
             android:screenOrientation="portrait" />
 
-        <activity android:name="edu.game.checkers.core.GameActivity"
+        <activity android:name="edu.game.checkers.ui.GameActivity"
             android:screenOrientation="portrait" />
 
-        <activity android:name="edu.game.checkers.core.SelectTypeActivity"
+        <activity android:name="edu.game.checkers.ui.SelectTypeActivity"
             android:screenOrientation="portrait" />
         
-        <activity android:name="edu.game.checkers.core.LocalGameActivity"
+        <activity android:name="edu.game.checkers.ui.LocalGameActivity"
             android:screenOrientation="portrait" />
         
-        <activity android:name="edu.game.checkers.core.NetworkGameActivity"
+        <activity android:name="edu.game.checkers.ui.NetworkGameActivity"
             android:screenOrientation="portrait" />
 
-        <activity android:name="edu.game.checkers.core.NetworkActivity"
+        <activity android:name="edu.game.checkers.ui.NetworkActivity"
             android:windowSoftInputMode="adjustResize"
             android:screenOrientation="portrait" />
 
-        <service android:name="edu.game.checkers.core.NetworkService" />
+        <service android:name="edu.game.checkers.ui.NetworkService" />
 
     </application>
 

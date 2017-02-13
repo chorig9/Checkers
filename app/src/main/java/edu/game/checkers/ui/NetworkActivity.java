@@ -1,4 +1,4 @@
-package edu.game.checkers.core;
+package edu.game.checkers.ui;
 
 import android.app.Dialog;
 import android.content.ComponentName;
@@ -32,10 +32,10 @@ import android.os.Handler;
 import java.util.ArrayList;
 
 import edu.board.checkers.R;
-import edu.game.checkers.core.callbacks.Callback0;
-import edu.game.checkers.core.callbacks.Callback1;
-import edu.game.checkers.core.callbacks.Callback3;
-import edu.game.checkers.core.callbacks.ConnectionCallback;
+import edu.game.checkers.utils.Callback0;
+import edu.game.checkers.utils.Callback1;
+import edu.game.checkers.utils.Callback3;
+import edu.game.checkers.utils.ConnectionCallback;
 
 public class NetworkActivity extends AppCompatActivity {
 
@@ -381,7 +381,7 @@ public class NetworkActivity extends AppCompatActivity {
 
     private class FriendListAdapter extends ArrayAdapter<Friend> {
 
-        public FriendListAdapter(Context context, int resource, ArrayList<Friend> list) {
+        FriendListAdapter(Context context, int resource, ArrayList<Friend> list) {
             super(context, resource, list);
         }
 

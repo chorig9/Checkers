@@ -1,4 +1,4 @@
-package edu.game.checkers.core;
+package edu.game.checkers.ui;
 
 import android.content.Context;
 import android.content.SharedPreferences;
@@ -81,7 +81,7 @@ public class GameActivity extends AppCompatActivity {
 
     protected class TouchManager implements View.OnTouchListener{
 
-        protected Position calculatePosition(View v, MotionEvent event){
+        Position calculatePosition(View v, MotionEvent event){
             int tileSize = v.getWidth() / 8;
 
             int x = ((int) event.getX()) / tileSize;
