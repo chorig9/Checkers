@@ -46,7 +46,14 @@ public class NetworkGameActivity extends GameActivity {
 
         TextView title = (TextView) findViewById(R.id.name_header);
         otherPlayer = bundle.getString("name");
-        options = bundle.getInt("options", 0);
+        options = bundle.getInt("options", -1);
+
+        handler = new Handler();
+        dialog = new PostAlertDialog(this, handler);
+
+        if(options == -1){
+            new AlertDialog(this).createExitDialog("exit", "wrong options");
+        }
 
         boolean locallyInitialized = bundle.getBoolean("locallyInitialized");
         if(locallyInitialized){
@@ -57,11 +64,8 @@ public class NetworkGameActivity extends GameActivity {
             boardView.rotate();
         }
 
-        String header = getString(R.string.name_header) + otherPlayer;
+        String header = getString(R.string.name_header) + otherPlayer + " " + Integer.toString(options);
         title.setText(header);
-
-        handler = new Handler();
-        dialog = new PostAlertDialog(this, handler);
     }
 
     @Override
@@ -127,8 +131,7 @@ public class NetworkGameActivity extends GameActivity {
                     manager.sendMove(new MoveMessage(prevPosition, realPosition).toString());
                 }
 
-                turnView.setColor(board.getCurrentPlayer() == Game.Player.WHITE ?
-                        Color.WHITE : Color.BLACK);
+                updateTurnView();
 
                 return true;
             }
@@ -223,7 +226,7 @@ public class NetworkGameActivity extends GameActivity {
                 board.clicked(moveStruct.first, false);
                 board.clicked(moveStruct.second, false);
                 boardView.postInvalidate();
-                turnView.postInvalidate();
+                updateTurnView();
             }
         }
     }

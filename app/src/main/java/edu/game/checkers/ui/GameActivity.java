@@ -96,11 +96,16 @@ public class GameActivity extends AppCompatActivity {
                 return false;
 
             board.clicked(realPosition, true);
-            turnView.setColor(board.getCurrentPlayer() == Game.Player.WHITE ?
-                    Color.WHITE : Color.BLACK);
+            updateTurnView();
 
             return true;
         }
+    }
+
+    protected void updateTurnView(){
+        turnView.setColor(board.getCurrentPlayer() == Game.Player.WHITE ?
+                Color.WHITE : Color.BLACK);
+        turnView.postInvalidate();
     }
 
     protected class TurnView extends View{

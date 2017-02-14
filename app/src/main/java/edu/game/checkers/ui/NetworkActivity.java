@@ -29,21 +29,22 @@ import android.widget.ListView;
 import android.widget.RelativeLayout;
 import android.widget.TextView;
 import android.os.Handler;
+
 import java.util.ArrayList;
+import java.util.Collection;
 
 import edu.board.checkers.R;
 import edu.game.checkers.utils.Callback0;
 import edu.game.checkers.utils.Callback1;
-import edu.game.checkers.utils.Callback3;
 import edu.game.checkers.utils.ConnectionCallback;
 
 import static edu.game.checkers.ui.OptionsActivity.OPTIONS_KEY;
 
 public class NetworkActivity extends AppCompatActivity {
 
-    private ArrayList<Friend> currentFriendsList = new ArrayList<>();
-    private ArrayList<Friend> friendsList = new ArrayList<>();
-    private ArrayAdapter<Friend> adapter;
+    private UserCollection userCollection;
+    private ArrayList<UserInfo> currentlyDisplayedUsers = new ArrayList<>();
+    private UserCollectionAdapter adapter;
     private ListView listView;
 
     private PostAlertDialog dialog;
@@ -155,7 +156,7 @@ public class NetworkActivity extends AppCompatActivity {
         editor.putString("password", password);
         editor.apply();
 
-        final int options = preferences.getInt(OPTIONS_KEY, -1);
+
         networkService.connectToServer(name, password, new ConnectionCallback() {
             @Override
             public void onConnectionError(String error) {
@@ -164,33 +165,28 @@ public class NetworkActivity extends AppCompatActivity {
 
             @Override
             public void onSuccess() {
-                networkService.setStatus(Integer.toString(options));
-                initList();
+                onConnectionSuccess();
             }
         });
 
+        addGameInviteCallback();
+    }
+
+    private void addGameInviteCallback(){
         networkService.setGameInviteCallback(new Callback1<String>() {
+
             @Override
             public void onAction(final String user) {
+
                 dialog.createQuestionDialog("Invitation", "Accept invitation from: " + user + " ?",
                         new DialogInterface.OnClickListener() {
+
                             @Override
                             public void onClick(DialogInterface dialog, int which) {
                                 if(which == Dialog.BUTTON_POSITIVE) {
-                                    Friend otherPlayer = null;
-                                    for(Friend friend : friendsList){
-                                        if(friend.username.equals(user))
-                                            otherPlayer = friend;
-                                    }
-
-                                    if(otherPlayer == null) {
-                                        NetworkActivity.this.dialog.createInfoDialog("Error", "User not on list");
-                                    }
-                                    else {
-                                        networkService.sendGameInvitationResponse(user, "yes");
-                                        // take other's player options, other player is initializing connection
-                                        startGame(otherPlayer.options, user, false);
-                                    }
+                                    acceptedGameInvite(user);
+                                } else{
+                                    rejectedGameInvite(user);
                                 }
                             }
                         });
@@ -198,62 +194,77 @@ public class NetworkActivity extends AppCompatActivity {
         });
     }
 
-    private void initList() {
 
-        listLoaded = true;
+    private void acceptedGameInvite(String user){
+        UserInfo otherPlayer = findUserInfoByName(user);
 
-        networkService.setPresenceListener(new Callback3<String, String, String>() {
-            @Override
-            public void onAction(String username, String presence, String info){
-                Friend friend = null;
-                for(Friend element : friendsList){
-                    if(element.username.equals(username))
-                        friend = element;
-                }
+        if(otherPlayer == null) {
+            NetworkActivity.this.dialog.createInfoDialog("Error", "Invitation from unknown user");
+        }
+        else {
+            networkService.sendGameInvitationResponse(user, "yes");
 
-                if(friend != null){
-                    friend.status = presence;
-                    friend.options = info;
+            // take other's player options, other player is initializing connection
+            int options = Integer.decode(otherPlayer.status);
+            startGame(options, user, false);
+        }
+    }
 
-                    if(currentFriendsList.contains(friend)) {
-                        listView.post(new Runnable() {
-                            @Override
-                            public void run() {
-                                adapter.notifyDataSetChanged();
-                            }
-                        });
-                    }
-                }
-            }
-        });
+    private void rejectedGameInvite(String user){
+        // TODO
+    }
 
-        networkService.setSubscriptionListener(new Callback0() {
+    private void onConnectionSuccess(){
+        SharedPreferences preferences = getSharedPreferences(OptionsActivity.OPTIONS_FILE,
+                MODE_PRIVATE);
+        int options = preferences.getInt(OPTIONS_KEY, -1);
+
+        networkService.setStatus(Integer.toString(options));
+        userCollection = networkService.getUserCollection();
+        userCollection.setListener(new Callback0() {
             @Override
             public void onAction() {
-                friendsList.clear();
-                friendsList.addAll(networkService.getUsers());
-
-                // post is used because showUsers will be called from outside NetworkActivity
-                listView.post(new Runnable() {
-                    @Override
-                    public void run() {
-                        showUsers(findViewById(R.id.search));
-                    }
-                });
-
+                postShowUsers();
             }
         });
+        initList();
+    }
 
+    private UserInfo findUserInfoByName(String username){
+        UserInfo userInfo = null;
+        for(UserInfo u : userCollection){
+            if(u.username.equals(username))
+                userInfo = u;
+        }
+
+        return userInfo;
+    }
+
+    private Collection<UserInfo> getUsersMatchingUsername(String username){
+        Collection<UserInfo> users = new ArrayList<>();
+
+        for(UserInfo u : userCollection){
+            if(u.username.startsWith(username))
+                users.add(u);
+        }
+
+        return users;
+    }
+
+    private void initList() {
+        listLoaded = true;
         setContentView(R.layout.activity_network_list);
 
         listView = (ListView) findViewById(R.id.players_list);
-        adapter = new FriendListAdapter(this, R.layout.player_list_element, currentFriendsList);
-
+        adapter = new UserCollectionAdapter(this, R.layout.player_list_element, currentlyDisplayedUsers);
         listView.setAdapter(adapter);
+        postShowUsers();
 
-        friendsList.addAll(networkService.getUsers());
-        currentFriendsList.addAll(friendsList);
+        addTextChangeListener();
+        addRemoveItemListener();
+    }
 
+    private void addTextChangeListener(){
         final EditText text = (EditText) findViewById(R.id.search);
         text.addTextChangedListener(new TextWatcher() {
 
@@ -262,46 +273,54 @@ public class NetworkActivity extends AppCompatActivity {
 
             @Override
             public void onTextChanged(CharSequence s, int start, int before, int count) {
-                showUsers(findViewById(R.id.search));
+                postShowUsers();
             }
         });
+    }
 
+    private void addRemoveItemListener(){
         listView.setOnItemLongClickListener(new AdapterView.OnItemLongClickListener() {
             @Override
             public boolean onItemLongClick(AdapterView<?> parent, final View view,
                                            final int position, long id) {
 
-                dialog.createQuestionDialog(friendsList.get(position).username, "Remove from list?",
-                                new DialogInterface.OnClickListener() {
-                                    @Override
-                                    public void onClick(DialogInterface dialog, int which) {
-                                        if(which == Dialog.BUTTON_POSITIVE) {
-                                            networkService.unsubscribeUser(friendsList.get(position).username);
-                                            friendsList.remove(position);
-                                            showUsers(findViewById(R.id.search));
-                                        }
-                                        else{
-                                            dialog.dismiss();
-                                        }
-                                    }
-                                });
+                final String username = currentlyDisplayedUsers.get(position).username;
+
+                dialog.createQuestionDialog(username, "Remove from list?",
+                        new DialogInterface.OnClickListener() {
+                            @Override
+                            public void onClick(DialogInterface dialog, int which) {
+                                if(which == Dialog.BUTTON_POSITIVE) {
+                                    networkService.unsubscribeUser(username);
+                                    postShowUsers();
+                                }
+                                else{
+                                    dialog.dismiss();
+                                }
+                            }
+                        });
 
                 return true;
             }
         });
+    }
 
-        adapter.notifyDataSetChanged();
+    private void postShowUsers(){
+        listView.post(new Runnable() {
+            @Override
+            public void run() {
+                showUsers(findViewById(R.id.search));
+            }
+        });
     }
 
     public void invitePlayer(View view) {
         final RelativeLayout element = (RelativeLayout) view;
         TextView nameView = (TextView) element.getChildAt(0);
-        final TextView invitation = (TextView) element.getChildAt(1);
         final String name = nameView.getText().toString();
 
-        if(element.getTag() == null || !element.getTag().equals("disabled")){
+        if(element.getTag() == null || element.getTag().equals("enabled")){
             element.setTag("disabled");
-            invitation.setText(R.string.invited);
             networkService.sendGameInvitation(name, new Callback1<Boolean>() {
                 @Override
                 public void onAction(Boolean accepted) {
@@ -310,15 +329,12 @@ public class NetworkActivity extends AppCompatActivity {
                         @Override
                         public void run() {
                             element.setTag("enabled");
-                            invitation.setText("");
-                            invitation.invalidate();
-                            element.invalidate();
                         }
                     });
 
                     SharedPreferences preferences = getSharedPreferences(OptionsActivity.OPTIONS_FILE,
                             MODE_PRIVATE);
-                    int options = preferences.getInt("options", 0);
+                    int options = preferences.getInt("options", -1);
                     if(accepted){
                         // this host is initializing connection
                         startGame(options, name, true);
@@ -340,15 +356,13 @@ public class NetworkActivity extends AppCompatActivity {
     public void showUsers(final View view){
         LinearLayout inviteLayout = (LinearLayout) findViewById(R.id.invite_space);
         inviteLayout.removeAllViews();
-        final String username = ((EditText) findViewById(R.id.search)).getText().toString();
 
-        currentFriendsList.clear();
-        for(Friend friend : friendsList){
-            if(friend.username.contains(username))
-                currentFriendsList.add(friend);
-        }
+        final String searchedUsername = ((EditText) findViewById(R.id.search)).getText().toString();
 
-        if(currentFriendsList.size() != 0){
+        currentlyDisplayedUsers.clear();
+        currentlyDisplayedUsers.addAll(getUsersMatchingUsername(searchedUsername));
+
+        if(currentlyDisplayedUsers.size() != 0){
             adapter.notifyDataSetChanged();
         }
         else { // no user is displayed - show invite button
@@ -360,21 +374,7 @@ public class NetworkActivity extends AppCompatActivity {
             button.setOnClickListener(new View.OnClickListener() {
                 @Override
                 public void onClick(View v) {
-                    final Friend friend = new Friend(username, "unknown");
-                    friend.accepted = false;
-                    friendsList.add(friend);
-
-                    networkService.subscribeUser(username, new Callback1<Boolean>() {
-                        @Override
-                        public void onAction(Boolean accepted) {
-                            if(accepted)
-                                friend.accepted = true;
-                            else
-                                friendsList.remove(friend);
-                            showUsers(view);
-                        }
-                    });
-                    showUsers(view);
+                    networkService.subscribeUser(searchedUsername);
                 }
             });
 
@@ -382,9 +382,9 @@ public class NetworkActivity extends AppCompatActivity {
         }
     }
 
-    private class FriendListAdapter extends ArrayAdapter<Friend> {
+    private class UserCollectionAdapter extends ArrayAdapter<UserInfo> {
 
-        FriendListAdapter(Context context, int resource, ArrayList<Friend> list) {
+        UserCollectionAdapter(Context context, int resource, ArrayList<UserInfo> list) {
             super(context, resource, list);
         }
 
@@ -392,7 +392,7 @@ public class NetworkActivity extends AppCompatActivity {
         @Override
         public View getView(int position, View convertView, @NonNull ViewGroup parent) {
             // Get the data item for this position
-            Friend friend = getItem(position);
+            UserInfo user = getItem(position);
 
             // Check if an existing view is being reused, otherwise inflate the view
             if (convertView == null) {
@@ -401,30 +401,50 @@ public class NetworkActivity extends AppCompatActivity {
             }
             TextView name = (TextView) convertView.findViewById(R.id.friend_name);
             TextView status = (TextView) convertView.findViewById(R.id.friend_status);
+            TextView invited = (TextView) convertView.findViewById(R.id.friend_invitation);
 
-            if(friend != null){
-                name.setText(friend.username);
-                if(!friend.accepted){
-                    name.setTextColor(Color.GRAY);
-                    status.setTextColor(Color.GRAY);
-                }
-                else {
-                    name.setTextColor(Color.BLACK);
-                    status.setTextColor(Color.BLACK);
-                }
+            if(user != null){
 
-                if(friend.status.equals("available")) {
-                    convertView.setBackgroundColor(Color.GREEN);
-                    convertView.setTag("enabled");
-                }
-                else {
-                    convertView.setBackgroundColor(Color.RED);
-                    convertView.setTag("disabled");
-                }
+                name.setText(user.username);
+                status.setText(user.status);
 
-                status.setText(friend.options);
+                setAvailability(convertView, user.presence);
+                setInviteStatus(invited, user.invitedToGame);
+                setBothWaySubscriptionStatus(name, user.bothWaySubscription);
             }
+
             return convertView;
         }
+
+        private void setBothWaySubscriptionStatus(TextView view, boolean bothWaySubscription){
+            if(!bothWaySubscription){
+                view.setTextColor(Color.GRAY);
+            }
+            else {
+                view.setTextColor(Color.BLACK);
+            }
+        }
+
+        private void setInviteStatus(TextView view, boolean invited){
+            if(invited){
+                view.setText("Invited");
+            }
+            else{
+                view.setText("");
+            }
+        }
+
+        private void setAvailability(View view, String presence){
+            if(presence.equals("available")){
+                view.setTag("enabled");
+                view.setBackgroundColor(Color.GREEN);
+            }
+            else{
+                view.setTag("disabled");
+                view.setBackgroundColor(Color.RED);
+            }
+        }
     }
+
+
 }
